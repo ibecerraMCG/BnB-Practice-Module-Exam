@@ -1394,7 +1394,6 @@ body.hide-lectures .nav-section-label { display: none; }
             </div>
             <div class="quiz-meta">
                 <div class="qm"><span class="n" id="meta-q">0</span><span class="l">Questions</span></div>
-                <div class="qm"><span class="n" id="meta-sec">0</span><span class="l">Sections</span></div>
                 <div class="qm"><span class="n" id="meta-mode">Tutor</span><span class="l">Mode</span></div>
                 <div id="tutor-retry-top"><button class="tt-retry" id="tutor-retry-top-btn" onclick="tutorRetryIncorrect()">🔁 Retry incorrect</button></div>
             </div>
@@ -1863,7 +1862,8 @@ function buildNavigator() {
     });
     document.getElementById('total-count').textContent = quizData.length;
     document.getElementById('meta-q').textContent = quizData.length;
-    document.getElementById('meta-sec').textContent = sections.length;
+    /* No "Sections" figure here: on this page a section is just a lecture, and
+       the lecture count is already given in the Practice exam line above. */
 }
 
 function updateNavCell(index) {
