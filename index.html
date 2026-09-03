@@ -1074,7 +1074,29 @@ body.no-accents .hdr-track .ht-fill{background:var(--solid-accent)}
 <style id="exam-build-style">
 /* The exam-build controls sit in the hero setup row, beside Quiz mode and
    Scoring, so everything that shapes the page is in one place. */
-#exam-build-block { flex: 1 1 340px; min-width: 300px; }
+/* Practice exam and Scoring are kept together on their own line so neither can
+   drift. Left to plain wrapping they came apart under browser zoom: once the
+   row fell below about 690px the Scoring card dropped to a line of its own but
+   kept its fixed 310px, leaving 170-340px of dead space beside it.
+
+   They now sit in their own grid, which is sized by ITS OWN width rather than
+   the viewport's - the sidebar and the content cap mean the two are not
+   proportional, so a viewport media query switches at the wrong moment. */
+/* The container is the ROW, not .setup-lower: a container query can only size
+   the container's descendants, never the container itself. */
+.setup-row { container-type: inline-size; }
+.setup-lower { flex: 1 1 100%; min-width: 0;
+    display: grid; grid-template-columns: minmax(0, 1fr) 310px;
+    gap: 16px; align-items: start; }
+@container (max-width: 700px) {
+    .setup-lower { grid-template-columns: minmax(0, 1fr); }
+}
+/* Browsers without container queries: fall back to the viewport, chosen for the
+   sidebar-open case, which is how the page is nearly always read. */
+@supports not (container-type: inline-size) {
+    @media (max-width: 1150px) { .setup-lower { grid-template-columns: minmax(0, 1fr); } }
+}
+#exam-build-block { min-width: 0; }
 .eb-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .eb-lab { font-size: 0.78rem; color: var(--text-muted); margin-right: 2px; }
 .eb-btn { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color);
@@ -1337,6 +1359,7 @@ body.hide-lectures .nav-section-label { display: none; }
                         </button>
                     </div>
                 </div>
+                <div class="setup-lower">
                 <div class="setup-block" id="exam-build-block">
                     <div class="setup-label">Practice exam</div>
                     <div class="eb-row">
@@ -1366,6 +1389,7 @@ body.hide-lectures .nav-section-label { display: none; }
                         <span class="st-box" aria-hidden="true"></span>
                         <span class="st-text"><span class="st-title">Live score</span><span class="st-sub">Running tally as you answer</span></span>
                     </button>
+                </div>
                 </div>
             </div>
             <div class="quiz-meta">
