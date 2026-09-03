@@ -1097,6 +1097,12 @@ body.no-accents .hdr-track .ht-fill{background:var(--solid-accent)}
     @media (max-width: 1150px) { .setup-lower { grid-template-columns: minmax(0, 1fr); } }
 }
 #exam-build-block { min-width: 0; }
+/* Shown in place of the questions when no lecture has anything unanswered left. */
+.exam-empty { display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
+    padding: 1.1rem 1.3rem; margin-bottom: 1.6rem; border-radius: var(--radius);
+    border: 1px dashed var(--border-color); background: var(--bg-input);
+    color: var(--text-muted); font-size: 0.9rem; }
+.exam-empty b { color: var(--text-main); font-weight: 700; }
 .eb-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .eb-lab { font-size: 0.78rem; color: var(--text-muted); margin-right: 2px; }
 .eb-btn { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color);
@@ -3005,18 +3011,16 @@ function drawExam(perTopic) {
     const blocks = TOPICS.map(topic => {
         const pool = BANK_BY_TOPIC[topic] || [];
         if (everything) return pool.slice();
-        const want = Math.min(n, pool.length);
         const fresh = pool.filter(i => !history.has(QUESTION_BANK[i].id));
-        /* Unanswered questions first. When a lecture has none left, top up at
-           random from the ones already answered. Drawing a question does not
-           mark it as used - only answering it does - so a question that came up
-           before and was left blank is still fresh here. */
-        const spare = want - fresh.length;
-        const take = spare <= 0
-            ? shuffleInPlace(fresh.slice()).slice(0, want)
-            : shuffleInPlace(fresh.slice()).concat(
-                  shuffleInPlace(pool.filter(i => history.has(QUESTION_BANK[i].id))).slice(0, spare));
-        return take.sort((a, b) => a - b);
+        /* Only ever unanswered questions. A lecture with none left drops out of
+           the exam entirely rather than repeating itself, and a lecture with
+           fewer left than asked for contributes just those - so an answered
+           question is never put in front of you again. Drawing does not use a
+           question up; only answering does, so one that came up before and was
+           left blank is still fresh here. */
+        if (!fresh.length) return [];
+        return shuffleInPlace(fresh.slice()).slice(0, Math.min(n, fresh.length))
+                                            .sort((a, b) => a - b);
     });
 
     /* Course order by default, whole lectures shuffled when asked for. A
@@ -3074,6 +3078,7 @@ function regenerateExam() {
 
     setExam(drawExam(perTopicSetting()));
     renderQuiz();
+    applyExamEmptyState();
     applyTutorRetryView();
     updateProgress();
     updateTutorTracker();
@@ -3105,6 +3110,24 @@ function armTwoStep(btn, action) {
     document.addEventListener('click', _resetOutside, true);
 }
 function resetHistoryClick(btn) { armTwoStep(btn, doResetHistory); }
+
+/* With every lecture exhausted the draw is empty, and an empty page with no
+   explanation would just look broken. Say what happened and offer the way out. */
+function applyExamEmptyState() {
+    const root = document.getElementById('quiz-root');
+    if (!root) return;
+    let el = document.getElementById('exam-empty');
+    if (quizData.length) { if (el) el.remove(); return; }
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'exam-empty';
+        el.className = 'exam-empty';
+        root.parentNode.insertBefore(el, root);
+    }
+    el.innerHTML = '<b>Every question in the bank has been answered.</b>' +
+        '<button class="eb-btn danger-outline" onclick="resetHistoryClick(this)">' +
+        'Reset question history</button>';
+}
 
 function syncExamBuild() {
     const sel = document.getElementById('per-topic-select');
@@ -3367,6 +3390,7 @@ function flashTutorRetry(msg) {
     applyLectureTitles(localStorage.getItem(K.showSections) === 'true');
     // render
     renderQuiz();
+    applyExamEmptyState();
     // tutor live score tracker + persistent exam report
     applyTutorRetryView();   // re-apply a retry pass left open last time
     applyGradeTrackUI();
