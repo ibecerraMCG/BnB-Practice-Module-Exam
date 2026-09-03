@@ -1084,11 +1084,11 @@ body.no-accents .hdr-track .ht-fill{background:var(--solid-accent)}
    proportional, so a viewport media query switches at the wrong moment. */
 /* The container is the ROW, not .setup-lower: a container query can only size
    the container's descendants, never the container itself. */
-.setup-row { container-type: inline-size; }
+.setup-row { container-type: inline-size; container-name: setuprow; }
 .setup-lower { flex: 1 1 100%; min-width: 0;
     display: grid; grid-template-columns: minmax(0, 1fr) 310px;
     gap: 16px; align-items: start; }
-@container (max-width: 700px) {
+@container setuprow (max-width: 700px) {
     .setup-lower { grid-template-columns: minmax(0, 1fr); }
 }
 /* Browsers without container queries: fall back to the viewport, chosen for the
@@ -1103,7 +1103,38 @@ body.no-accents .hdr-track .ht-fill{background:var(--solid-accent)}
     border: 1px dashed var(--border-color); background: var(--bg-input);
     color: var(--text-muted); font-size: 0.9rem; }
 .exam-empty b { color: var(--text-main); font-weight: 700; }
-.eb-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+/* The note under the figures, and the two controls that only appear in the
+   missed-questions set. Both rows use the same .eb-row flex wrap inside the
+   same grid cell, so switching between them cannot change the block's shape. */
+.eb-note { margin-top: 0.4rem; font-size: 0.68rem; line-height: 1.45;
+    color: var(--text-muted); max-width: 62ch; }
+.eb-btn.eb-missed:hover:not(:disabled) { border-color: var(--text-accent-2); color: var(--text-accent-2); }
+.eb-btn.eb-back { background: transparent; }
+.eb-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.eb-btn:disabled:hover { border-color: var(--border-color); color: var(--text-main); }
+#wrongset-banner { display: none; }
+/* Two even columns, so the controls line up in a block instead of ragged
+   wrapping: field | action, then a full-width row for the switch, then the
+   remaining pair. Every cell is the same width at every zoom level, because
+   the columns are fractions of the block rather than content-sized. */
+.eb-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px; align-items: stretch; }
+.eb-row .eb-span2 { grid-column: 1 / -1; }
+.eb-row .eb-btn { width: 100%; display: inline-flex; align-items: center;
+    justify-content: center; gap: 7px; white-space: normal; }
+.eb-field { display: flex; align-items: center; gap: 8px; min-width: 0;
+    padding: 0.42rem 0; }
+.eb-field .eb-lab { margin: 0; flex: 1 1 auto; min-width: 0; }
+.eb-field .mini-select { flex: 0 0 auto; }
+/* One column when the block itself is too narrow for two - measured on the
+   block, not the viewport, so it holds at any zoom. */
+#exam-build-block { container-type: inline-size; container-name: exambuild; }
+@container exambuild (max-width: 430px) {
+    .eb-row { grid-template-columns: minmax(0, 1fr); }
+}
+@supports not (container-type: inline-size) {
+    @media (max-width: 1150px) { .eb-row { grid-template-columns: minmax(0, 1fr); } }
+}
 .eb-lab { font-size: 0.78rem; color: var(--text-muted); margin-right: 2px; }
 .eb-btn { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color);
     border-radius: 9px; padding: 0.42rem 0.75rem; font: inherit; font-size: 0.78rem;
@@ -1367,27 +1398,52 @@ body.hide-lectures .nav-section-label { display: none; }
                 </div>
                 <div class="setup-lower">
                 <div class="setup-block" id="exam-build-block">
-                    <div class="setup-label">Practice exam</div>
-                    <div class="eb-row">
-                        <label class="eb-lab" for="per-topic-select">Questions per lecture</label>
-                        <select id="per-topic-select" class="mini-select" onchange="setPerTopic(this.value)" title="How many questions to draw from each lecture">
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                            <option value="4">4</option>
-                            <option value="5">5</option>
-                            <option value="8">8</option>
-                            <option value="10">10</option>
-                            <option value="all">All</option>
-                        </select>
+                    <div class="setup-label" id="eb-label">Practice exam</div>
+                    <div class="eb-row" id="eb-normal">
+                        <div class="eb-field">
+                            <label class="eb-lab" for="per-topic-select">Questions per lecture</label>
+                            <select id="per-topic-select" class="mini-select" onchange="setPerTopic(this.value)" title="How many questions to draw from each lecture">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="8">8</option>
+                                <option value="10">10</option>
+                                <option value="all">All</option>
+                            </select>
+                        </div>
                         <button class="eb-btn" id="regen-btn" onclick="regenerateExam()" title="Draw a new set of questions">&#8635; Regenerate</button>
-                        <button class="eb-btn eb-switch" id="shuffle-toggle" role="switch" aria-checked="false" onclick="toggleShuffleTopics()" title="Draw the lectures in a random order instead of course order">
+                        <button class="eb-btn eb-switch eb-span2" id="shuffle-toggle" role="switch" aria-checked="false" onclick="toggleShuffleTopics()" title="Draw the lectures in a random order instead of course order">
                             <span class="eb-box" aria-hidden="true"></span>
                             Randomize lecture order
                         </button>
+                        <button class="eb-btn eb-missed" id="missed-btn" onclick="setExamSet('wrong')" title="Build a set from the questions you have answered incorrectly">&#128257; Missed questions</button>
                         <button class="eb-btn danger-outline" id="reset-history-btn" onclick="resetHistoryClick(this)" title="Forget which questions have already been answered, so the whole bank counts as fresh again">Reset question history</button>
                     </div>
+                    <div class="eb-row" id="eb-wrong" style="display:none">
+                        <div class="eb-field">
+                            <label class="eb-lab" for="wrong-count-select">Missed questions to show</label>
+                            <select id="wrong-count-select" class="mini-select" onchange="setWrongCount(this.value)" title="How many of the questions you have missed to put on the page">
+                                <option value="all">All</option>
+                                <option value="5">5</option>
+                                <option value="10">10</option>
+                                <option value="20">20</option>
+                                <option value="30">30</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+                        <button class="eb-btn" id="wrong-regen" onclick="rebuildExam()" title="Draw a new set from the questions you have missed">&#8635; New set</button>
+                        <button class="eb-btn eb-switch eb-span2" id="wrong-shuffle" role="switch" aria-checked="false" onclick="toggleWrongShuffle()" title="Put the missed questions in a random order instead of course order">
+                            <span class="eb-box" aria-hidden="true"></span>
+                            Randomize question order
+                        </button>
+                        <button class="eb-btn eb-back eb-span2" id="wrong-exit" onclick="setExamSet('normal')" title="Go back to the full practice exam">&larr; Back to the full exam</button>
+                    </div>
                     <div class="eb-stat" id="eb-stat"></div>
+                    <div class="eb-note">Previously answered questions are not included upon page
+                        regeneration unless question history is reset.</div>
                 </div>
                 <div class="setup-block setup-block-narrow" id="grade-setup-block">
                     <div class="setup-label">Scoring</div>
@@ -1517,6 +1573,10 @@ const K = {
     ,history:   'q_' + QUIZ_ID + '_history'     // ids already served, so a regenerated exam asks new things
     ,shuffle:   'q_' + QUIZ_ID + '_shuffle'     // draw the lectures in a random order
     ,showSections: 'q_' + QUIZ_ID + '_showSections'  // lecture titles visible (default: hidden)
+    ,wrong:     'q_' + QUIZ_ID + '_wrong'       // ids answered incorrectly, kept across regenerations
+    ,setMode:   'q_' + QUIZ_ID + '_setMode'     // 'normal' | 'wrong' - which kind of set is on the page
+    ,wrongCount:'q_' + QUIZ_ID + '_wrongCount'  // how many missed questions to show ('all' | a number)
+    ,wrongShuffle: 'q_' + QUIZ_ID + '_wrongShuffle'  // shuffle the missed questions' order
 };
 
 const root = document.documentElement;
@@ -2978,14 +3038,58 @@ const BANK_BY_TOPIC = (() => {
    again except by "Reset question history". */
 function examHistory() { return new Set(load(K.history, [])); }
 
+/* Which questions have been answered incorrectly, across every exam drawn so
+   far - the record a "missed questions" set is built from. The verdict follows
+   the CURRENT answer, so changing your mind updates it, and getting one right
+   on a later attempt takes it back off the list. */
+function wrongSet() { return new Set(load(K.wrong, [])); }
+
 function markAnswered(index) {
     const q = quizData[index];
     if (!q || !q.id) return;
+    let changed = false;
+
     const history = examHistory();
-    if (history.has(q.id)) return;          // already counted
-    history.add(q.id);
-    save(K.history, Array.from(history));
-    syncExamBuild();
+    if (!history.has(q.id)) {
+        history.add(q.id);
+        save(K.history, Array.from(history));
+        changed = true;
+    }
+
+    const wrong = wrongSet();
+    const missed = answers[index] !== q.correctAnswer;
+    if (missed !== wrong.has(q.id)) {
+        if (missed) wrong.add(q.id); else wrong.delete(q.id);
+        save(K.wrong, Array.from(wrong));
+        changed = true;
+    }
+    if (changed) syncExamBuild();
+}
+
+/* Bank positions of the missed questions, in course order. */
+function wrongIndices() {
+    const wrong = wrongSet();
+    const out = [];
+    QUESTION_BANK.forEach((q, i) => { if (wrong.has(q.id)) out.push(i); });
+    return out;
+}
+
+function isWrongMode() { return localStorage.getItem(K.setMode) === 'wrong'; }
+function wrongCountSetting() { return localStorage.getItem(K.wrongCount) || 'all'; }
+function wrongShuffleOn() { return localStorage.getItem(K.wrongShuffle) === 'true'; }
+
+/* A set drawn from the missed questions rather than from the lectures. Asking
+   for fewer than there are takes a random subset, so pressing New set gives a
+   different selection; the order is course order unless shuffling is on. */
+function drawWrongSet() {
+    let pick = wrongIndices();
+    const want = wrongCountSetting();
+    if (want !== 'all') {
+        const n = Math.max(1, parseInt(want, 10) || 1);
+        if (n < pick.length) pick = shuffleInPlace(pick).slice(0, n);
+    }
+    if (wrongShuffleOn()) shuffleInPlace(pick); else pick.sort((a, b) => a - b);
+    return pick;
 }
 function perTopicSetting() {
     const v = localStorage.getItem(K.perTopic);
@@ -3057,14 +3161,14 @@ function restoreExam() {
         saved.forEach(id => { const i = byId.get(id); if (i !== undefined) idx.push(i); });
         if (idx.length === saved.length) { setExam(idx); return; }
     }
-    setExam(drawExam(perTopicSetting()));
+    setExam(isWrongMode() ? drawWrongSet() : drawExam(perTopicSetting()));
 }
 
 /* A new set of questions makes the old answers meaningless - they are stored
    by position - so regenerating clears the answer state on the page. It never
    clears the record of which questions have been answered, which is the whole
    point of that record. */
-function regenerateExam() {
+function clearAnswerState() {
     answers = {}; flags = {}; submitted = {}; graded = false; strikes = {}; highlights = {};
     save(K.answers, answers); save(K.flags, flags); save(K.submitted, submitted);
     save(K.strikes, strikes); save(K.hl, highlights);
@@ -3075,15 +3179,72 @@ function regenerateExam() {
     const rc = document.getElementById('results-card');
     if (rc) { rc.classList.remove('show'); rc.innerHTML = ''; }
     const rb = document.getElementById('retry-banner'); if (rb) rb.style.display = 'none';
+}
 
-    setExam(drawExam(perTopicSetting()));
+/* Draw a new set - of whichever kind the page is currently on - and put the
+   whole page back in step with it. */
+function rebuildExam() {
+    clearAnswerState();
+    setExam(isWrongMode() ? drawWrongSet() : drawExam(perTopicSetting()));
     renderQuiz();
     applyExamEmptyState();
+    applyWrongBanner();
     applyTutorRetryView();
     updateProgress();
     updateTutorTracker();
     syncExamBuild();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function regenerateExam() { rebuildExam(); }
+
+/* Switch between the full exam and a set of the questions missed so far. */
+function setExamSet(which) {
+    try { localStorage.setItem(K.setMode, which === 'wrong' ? 'wrong' : 'normal'); } catch (e) {}
+    rebuildExam();
+}
+function setWrongCount(v) {
+    try { localStorage.setItem(K.wrongCount, v); } catch (e) {}
+    rebuildExam();
+}
+function toggleWrongShuffle() {
+    try { localStorage.setItem(K.wrongShuffle, wrongShuffleOn() ? 'false' : 'true'); } catch (e) {}
+    rebuildExam();
+}
+
+/* The banner above the questions while a missed-questions set is on the page. */
+function applyWrongBanner() {
+    let b = document.getElementById('wrongset-banner');
+    if (!isWrongMode()) { if (b) b.remove(); return; }
+    if (!b) {
+        b = document.createElement('div');
+        b.id = 'wrongset-banner';
+        b.className = 'retry-banner';
+        const root = document.getElementById('quiz-root');
+        root.parentNode.insertBefore(b, root);
+    }
+    const total = wrongIndices().length;
+    const shown = quizData.length;
+    const want = wrongCountSetting();
+    const asked = want === 'all' ? null : parseInt(want, 10);
+    let msg;
+    if (!total) {
+        msg = '<span>Nothing has been answered incorrectly yet.</span>';
+    } else if (asked && asked > total) {
+        /* Asked for more than exist: show them all and say so plainly. */
+        msg = '<span>\u{1F501} Only <b>' + total + '</b> question' + (total > 1 ? 's have' : ' has') +
+              ' been answered incorrectly, so all ' + total + ' ' + (total > 1 ? 'are' : 'is') +
+              ' shown.</span>';
+    } else if (shown < total) {
+        msg = '<span>\u{1F501} Showing <b>' + shown + '</b> of <b>' + total +
+              '</b> missed questions.</span>';
+    } else {
+        msg = '<span>\u{1F501} Retrying <b>' + total + '</b> missed question' +
+              (total > 1 ? 's' : '') + '.</span>';
+    }
+    b.innerHTML = msg +
+        '<button class="results-btn" onclick="setExamSet(\'normal\')">Back to the full exam</button>';
+    b.style.display = 'flex';
 }
 
 function setPerTopic(v) {
@@ -3124,12 +3285,28 @@ function applyExamEmptyState() {
         el.className = 'exam-empty';
         root.parentNode.insertBefore(el, root);
     }
-    el.innerHTML = '<b>Every question in the bank has been answered.</b>' +
-        '<button class="eb-btn danger-outline" onclick="resetHistoryClick(this)">' +
-        'Reset question history</button>';
+    el.innerHTML = isWrongMode()
+        ? '<b>Nothing has been answered incorrectly yet.</b>' +
+          '<button class="eb-btn" onclick="setExamSet(\'normal\')">Back to the full exam</button>'
+        : '<b>Every question in the bank has been answered.</b>' +
+          '<button class="eb-btn danger-outline" onclick="resetHistoryClick(this)">' +
+          'Reset question history</button>';
 }
 
 function syncExamBuild() {
+    const wrongMode = isWrongMode();
+    const nWrong = wrongIndices().length;
+
+    /* One settings block, two sets of controls: only the ones that apply to
+       the kind of set on the page are shown, so the block never grows or
+       reflows differently between the two. */
+    const lab = document.getElementById('eb-label');
+    if (lab) lab.textContent = wrongMode ? 'Missed questions' : 'Practice exam';
+    const rowN = document.getElementById('eb-normal');
+    const rowW = document.getElementById('eb-wrong');
+    if (rowN) rowN.style.display = wrongMode ? 'none' : '';
+    if (rowW) rowW.style.display = wrongMode ? '' : 'none';
+
     const sel = document.getElementById('per-topic-select');
     if (sel) sel.value = perTopicSetting();
     const sh = document.getElementById('shuffle-toggle');
@@ -3138,12 +3315,31 @@ function syncExamBuild() {
         sh.classList.toggle('on', on);
         sh.setAttribute('aria-checked', on ? 'true' : 'false');
     }
+    const wc = document.getElementById('wrong-count-select');
+    if (wc) wc.value = wrongCountSetting();
+    const wsh = document.getElementById('wrong-shuffle');
+    if (wsh) {
+        const on = wrongShuffleOn();
+        wsh.classList.toggle('on', on);
+        wsh.setAttribute('aria-checked', on ? 'true' : 'false');
+    }
+    const mb = document.getElementById('missed-btn');
+    if (mb) {
+        mb.innerHTML = '\u{1F501} Missed questions' + (nWrong ? ' &middot; ' + nWrong : '');
+        mb.disabled = nWrong === 0;
+        mb.title = nWrong ? 'Build a set from the ' + nWrong +
+                            ' question' + (nWrong > 1 ? 's' : '') + ' you have answered incorrectly'
+                          : 'Nothing has been answered incorrectly yet';
+    }
+
     const stat = document.getElementById('eb-stat');
     if (stat) {
-        const used = examHistory().size;
-        stat.innerHTML = '<b>' + TOPICS.length + '</b> lectures &middot; <b>' +
-            QUESTION_BANK.length + '</b> in the bank &middot; <b>' +
-            (QUESTION_BANK.length - used) + '</b> not yet answered';
+        stat.innerHTML = wrongMode
+            ? '<b>' + nWrong + '</b> answered incorrectly &middot; <b>' + quizData.length +
+              '</b> on this page'
+            : '<b>' + TOPICS.length + '</b> lectures &middot; <b>' + QUESTION_BANK.length +
+              '</b> in the bank &middot; <b>' + (QUESTION_BANK.length - examHistory().size) +
+              '</b> not yet answered';
     }
 }
 
@@ -3391,6 +3587,7 @@ function flashTutorRetry(msg) {
     // render
     renderQuiz();
     applyExamEmptyState();
+    applyWrongBanner();      // re-show the missed-questions banner if that set is on the page
     // tutor live score tracker + persistent exam report
     applyTutorRetryView();   // re-apply a retry pass left open last time
     applyGradeTrackUI();
