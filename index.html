@@ -1589,6 +1589,7 @@ const K = {
     ,setMode:   'q_' + QUIZ_ID + '_setMode'     // 'normal' | 'wrong' - which kind of set is on the page
     ,wrongCount:'q_' + QUIZ_ID + '_wrongCount'  // how many missed questions to show ('all' | a number)
     ,wrongShuffle: 'q_' + QUIZ_ID + '_wrongShuffle'  // shuffle the missed questions' order
+    ,stash:     'q_' + QUIZ_ID + '_stash'       // the exam parked while the missed set is on screen
 };
 
 const root = document.documentElement;
@@ -3218,10 +3219,108 @@ function rebuildExam() {
 
 function regenerateExam() { rebuildExam(); }
 
+/* ------------------------------------------------------------------
+   Reviewing the missed questions must leave the exam underneath alone. The
+   whole page state is parked on the way in and put back on the way out, so
+   coming back gives the same questions in the same order with the same
+   answers - never a fresh draw. It is keyed by question id rather than by
+   position, because the two sets are ordered differently.
+------------------------------------------------------------------ */
+function stashNormalState() {
+    const byId = obj => {
+        const out = {};
+        quizData.forEach((q, i) => { if (obj[i] !== undefined) out[q.id] = obj[i]; });
+        return out;
+    };
+    save(K.stash, {
+        ids: quizData.map(q => q.id),
+        answers: byId(answers), submitted: byId(submitted), flags: byId(flags),
+        strikes: byId(strikes), hl: byId(highlights),
+        all: !!submitted.all, graded: graded, snapshot: gradedSnapshot
+    });
+}
+
+/* Put the parked exam back. Anything re-answered during the review overrides
+   what was parked, so a question fixed in review returns marked correct -
+   that is the only thing allowed to differ. */
+function restoreNormalState() {
+    const st = load(K.stash, null);
+    if (!st || !st.ids || !st.ids.length) return false;
+    const pos = new Map(QUESTION_BANK.map((q, i) => [q.id, i]));
+    const idx = [];
+    st.ids.forEach(id => { const i = pos.get(id); if (i !== undefined) idx.push(i); });
+    if (idx.length !== st.ids.length) return false;
+
+    const reviewed = {}, reviewedSubmitted = {};
+    quizData.forEach((q, i) => {
+        if (answers[i] !== undefined) reviewed[q.id] = answers[i];
+        if (submitted[i]) reviewedSubmitted[q.id] = true;
+    });
+
+    setExam(idx);          // the parked questions, in their parked order
+
+    answers = {}; submitted = {}; flags = {}; strikes = {}; highlights = {};
+    let verdictChanged = false;
+    quizData.forEach((q, i) => {
+        const id = q.id;
+        const fromReview = reviewed[id] !== undefined;
+        const a = fromReview ? reviewed[id] : st.answers[id];
+        if (a !== undefined) answers[i] = a;
+        if (reviewedSubmitted[id] || st.submitted[id]) submitted[i] = true;
+        if (st.flags[id]) flags[i] = st.flags[id];
+        if (st.strikes[id]) strikes[i] = st.strikes[id];
+        if (st.hl[id] !== undefined) highlights[i] = st.hl[id];
+        if (fromReview && st.answers[id] !== reviewed[id]) verdictChanged = true;
+    });
+    if (st.all) submitted.all = true;
+    graded = !!st.graded;
+    gradedSnapshot = st.snapshot || null;
+
+    /* A grade that is still on screen has to agree with what the page now
+       shows, so recompute it when a verdict moved. */
+    if (gradedSnapshot && verdictChanged) {
+        const fresh = computeScore();
+        gradedSnapshot.correct = fresh.correct;
+        gradedSnapshot.total = fresh.total;
+        gradedSnapshot.perSection = fresh.perSection;
+        gradedSnapshot.answers = Object.assign({}, answers);
+    }
+
+    retrySet = []; tutorRetry = null; retryMode = false;
+    save(K.answers, answers); save(K.submitted, submitted); save(K.flags, flags);
+    save(K.strikes, strikes); save(K.hl, highlights);
+    save(K.snapshot, gradedSnapshot); save(K.retrySet, retrySet); save(K.tutorRetry, null);
+    save(K.stash, null);
+    return true;
+}
+
 /* Switch between the full exam and a set of the questions missed so far. */
 function setExamSet(which) {
-    try { localStorage.setItem(K.setMode, which === 'wrong' ? 'wrong' : 'normal'); } catch (e) {}
-    rebuildExam();
+    const want = (which === 'wrong') ? 'wrong' : 'normal';
+    if (want === (isWrongMode() ? 'wrong' : 'normal')) return;   // already there
+
+    if (want === 'wrong') {
+        stashNormalState();
+        try { localStorage.setItem(K.setMode, 'wrong'); } catch (e) {}
+        clearAnswerState();
+        setExam(drawWrongSet());
+    } else {
+        const restored = restoreNormalState();
+        try { localStorage.setItem(K.setMode, 'normal'); } catch (e) {}
+        if (!restored) {           // nothing parked: fall back to a fresh draw
+            clearAnswerState();
+            setExam(drawExam(perTopicSetting()));
+        }
+    }
+    renderQuiz();
+    applyExamEmptyState();
+    applyWrongBanner();
+    applyTutorRetryView();
+    updateProgress();
+    updateTutorTracker();
+    if (typeof refreshResults === 'function') refreshResults();
+    syncExamBuild();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function setWrongCount(v) {
     try { localStorage.setItem(K.wrongCount, v); } catch (e) {}
