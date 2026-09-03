@@ -1113,6 +1113,18 @@ body.no-accents .hdr-track .ht-fill{background:var(--solid-accent)}
 .eb-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 .eb-btn:disabled:hover { border-color: var(--border-color); color: var(--text-main); }
 #wrongset-banner { display: none; }
+/* Shown instead of the classic layout, which this page cannot use. */
+#classic-unavailable { position: fixed; inset: 0; z-index: 99999; display: flex;
+    align-items: center; justify-content: center; padding: 2rem;
+    background: var(--bg-body); }
+.cu-card { max-width: 34rem; text-align: center; }
+.cu-card h1 { font-size: clamp(1.25rem, 3vw, 1.85rem); font-weight: 800; line-height: 1.2;
+    margin: 0 0 0.9rem; color: var(--text-main); }
+.cu-card p { margin: 0 0 1.8rem; color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; }
+.cu-btn { font: inherit; font-size: 1rem; font-weight: 700; color: #fff; cursor: pointer;
+    padding: 0.95rem 2rem; border-radius: 12px; border: 0; background: var(--solid-accent);
+    transition: transform 0.16s, filter 0.16s; }
+.cu-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
 /* Two even columns, so the controls line up in a block instead of ragged
    wrapping: field | action, then a full-width row for the switch, then the
    remaining pair. Every cell is the same width at every zoom level, because
@@ -2957,17 +2969,25 @@ function bbGetClassicDoc() {
     doc = doc.replace(/<\\\/script>/g, '</' + 'script>');
     return doc;
 }
+/* The classic layout cannot show this page. It reads its questions from
+   window.__bbQuizData, which is only filled once an exam has been drawn from
+   the bank - and the classic path returns from init before that happens, so it
+   renders nothing at all. Rather than a blank screen, say so and offer the way
+   back. */
 function renderClassicLayout() {
     const app = document.getElementById('app');
     if (app) app.style.display = 'none';
     try { window.bgFx && window.bgFx.stop(); } catch (e) {}
-    const f = document.createElement('iframe');
-    f.id = 'bb-classic-frame';
-    f.title = 'Classic layout';
-    f.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0;z-index:99999;';
-    f.addEventListener('load', () => { try { f.contentWindow.focus(); } catch (e) {} });
-    f.srcdoc = bbGetClassicDoc();
-    document.body.appendChild(f);
+    const wrap = document.createElement('div');
+    wrap.id = 'classic-unavailable';
+    wrap.innerHTML =
+        '<div class="cu-card">' +
+        '<h1>Classic view is not available for this page</h1>' +
+        '<p>The practice module exam draws its questions from the whole question ' +
+        'bank, which the classic layout cannot display.</p>' +
+        '<button class="cu-btn" onclick="bbSetLayout(\'modern\')">Return to modern view</button>' +
+        '</div>';
+    document.body.appendChild(wrap);
     document.body.style.overflow = 'hidden';
 }
 function bbSetLayout(v) { try { localStorage.setItem('bb_layout', v); } catch (e) {} location.reload(); }
