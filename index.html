@@ -1133,6 +1133,16 @@ body.set-review #reset-top-btn { display: none !important; }
 body.set-review #tutor-retry-top,
 body.set-review #tutor-retry-btn,
 body.set-review #tt-retry-btn { display: none !important; }
+/* There is no progress to make through a read-back either - every question in
+   it has already been answered - so both trackers go. The live score stays: a
+   tally of how the answers turned out is exactly what a review is for. */
+body.set-review .nav-summary,
+body.set-review #hdr-track { display: none !important; }
+/* The live score belongs to the whole read-back: a tally over only the right
+   answers, or only the wrong ones, is a foregone conclusion. It goes with the
+   filtered views and comes back for All. */
+body.set-review-part #grade-setup-block,
+body.set-review-part #tutor-tracker { display: none !important; }
 /* Shown instead of the classic layout, which this page cannot use. */
 #classic-unavailable { position: fixed; inset: 0; z-index: 99999; display: flex;
     align-items: center; justify-content: center; padding: 2rem;
@@ -1208,6 +1218,10 @@ body.hide-lectures #nav-sections .nav-grid { display: contents; }
 body.hide-lectures .nav-section-label { display: none; }
 
 /* The lecture-order switch, sized to sit in the Practice exam row. */
+/* The read-back's view switch: three even parts of one full-width control, so
+   the row stays as even as the single buttons above and below it. */
+.eb-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.eb-seg .eb-btn.on { border-color: var(--text-accent); color: var(--text-accent); }
 .eb-btn.eb-switch { display: inline-flex; align-items: center; gap: 7px; }
 .eb-switch .eb-box { width: 15px; height: 15px; border-radius: 4px; flex: 0 0 auto;
     border: 1.5px solid var(--border-color); background: var(--bg-body);
@@ -1477,6 +1491,11 @@ body.hide-lectures .nav-section-label { display: none; }
                         <button class="eb-btn eb-back eb-span2" onclick="setExamSet('normal')" title="Go back to the full practice exam">&larr; Back to the full exam</button>
                     </div>
                     <div class="eb-row" id="eb-review" style="display:none">
+                        <div class="eb-seg eb-span2" role="group" aria-label="Which answered questions to show">
+                            <button class="eb-btn" id="rv-all" onclick="setReviewFilter('all')" title="Show every question you have answered">All</button>
+                            <button class="eb-btn" id="rv-correct" onclick="setReviewFilter('correct')" title="Show only the ones you answered correctly">&#10003; Correct</button>
+                            <button class="eb-btn" id="rv-wrong" onclick="setReviewFilter('wrong')" title="Show only the ones you answered incorrectly">&#10007; Incorrect</button>
+                        </div>
                         <button class="eb-btn eb-back eb-span2" onclick="setExamSet('normal')" title="Go back to the full practice exam">&larr; Back to the full exam</button>
                     </div>
                     <div class="eb-row" id="eb-wrong" style="display:none">
@@ -1639,6 +1658,7 @@ const K = {
     ,given:     'q_' + QUIZ_ID + '_given'       // id -> the option chosen, so answers can be reviewed later
     ,customCount:  'q_' + QUIZ_ID + '_customCount'    // how many questions a custom set draws
     ,customShuffle:'q_' + QUIZ_ID + '_customShuffle'  // shuffle a custom set's order
+    ,reviewFilter: 'q_' + QUIZ_ID + '_reviewFilter'   // read-back view: 'all' | 'correct' | 'wrong'
 };
 
 const root = document.documentElement;
@@ -3262,8 +3282,27 @@ function drawCustomSet() {
     return pick;
 }
 
-/* Every question ever answered, in course order. */
-function drawReviewSet() { return answeredIndices(); }
+/* Which answered questions the read-back shows: all of them, or only one side
+   of the verdict. */
+function reviewFilter() {
+    const v = localStorage.getItem(K.reviewFilter);
+    return (v === 'correct' || v === 'wrong') ? v : 'all';
+}
+function setReviewFilter(v) {
+    const want = (v === 'correct' || v === 'wrong') ? v : 'all';
+    try { localStorage.setItem(K.reviewFilter, want); } catch (e) {}
+    if (examSetMode() === 'review') rebuildExam(); else syncExamBuild();
+}
+
+/* The answered questions this view covers, in course order. Filtering the set
+   itself rather than hiding cards keeps the navigator, the progress tracker and
+   the figures in step with what is on the page. */
+function drawReviewSet() {
+    const f = reviewFilter();
+    if (f === 'all') return answeredIndices();
+    const missed = wrongSet();
+    return answeredIndices().filter(i => missed.has(QUESTION_BANK[i].id) === (f === 'wrong'));
+}
 
 /* Put the recorded answers back on the page and open every rationale, so a
    review reads exactly as it was left. */
@@ -3580,9 +3619,13 @@ function applyWrongBanner() {
                 : '<span>\u{1F3B2} Custom set of <b>' + n + '</b> question' +
                   (n === 1 ? '' : 's') + ' drawn at random from the bank.</span>';
         } else {
+            const f = reviewFilter();
+            const q = ' question' + (n === 1 ? '' : 's');
+            const what = f === 'correct' ? 'the <b>' + n + '</b>' + q + ' you answered correctly'
+                       : f === 'wrong'   ? 'the <b>' + n + '</b>' + q + ' you answered incorrectly'
+                       : 'all <b>' + n + '</b> answered' + q;
             msg = n
-                ? '<span>\u{1F4D6} Reviewing all <b>' + n + '</b> answered question' +
-                  (n === 1 ? '' : 's') + ', shown as they were answered.</span>'
+                ? '<span>\u{1F4D6} Reviewing ' + what + ', shown as they were answered.</span>'
                 : '<span>Nothing has been answered yet.</span>';
         }
         b.innerHTML = msg +
@@ -3668,7 +3711,13 @@ function applyExamEmptyState() {
                       'Reset question history</button>';
     el.innerHTML =
         (m === 'wrong')  ? '<b>Nothing has been answered incorrectly yet.</b>' + back :
-        (m === 'review') ? '<b>Nothing has been answered yet.</b>' + back :
+        (m === 'review') ? '<b>' +
+            (reviewFilter() === 'correct' ? 'Nothing has been answered correctly yet.' :
+             reviewFilter() === 'wrong'   ? 'Nothing has been answered incorrectly yet.' :
+                                            'Nothing has been answered yet.') + '</b>' +
+            (reviewFilter() === 'all' ? '' :
+                '<button class="eb-btn" onclick="setReviewFilter(\'all\')">Show all answered</button>') +
+            back :
         (m === 'custom') ? '<b>Every question in the bank has been answered, ' +
                            'so there is nothing left to draw a custom set from.</b>' + resetHist + back :
         '<b>Every question in the bank has been answered.</b>' + resetHist;
@@ -3694,6 +3743,7 @@ function syncExamBuild() {
     });
 
     document.body.classList.toggle('set-review', m === 'review');
+    document.body.classList.toggle('set-review-part', m === 'review' && reviewFilter() !== 'all');
 
     const cc = document.getElementById('custom-count');
     if (cc) {
@@ -3706,6 +3756,12 @@ function syncExamBuild() {
         csh.classList.toggle('on', on);
         csh.setAttribute('aria-checked', on ? 'true' : 'false');
     }
+    const rf = reviewFilter();
+    [['rv-all', 'all'], ['rv-correct', 'correct'], ['rv-wrong', 'wrong']].forEach(([id, v]) => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.toggle('on', rf === v); el.setAttribute('aria-pressed', rf === v ? 'true' : 'false'); }
+    });
+
     const nAnswered = answeredCount();
     const rb = document.getElementById('review-btn');
     if (rb) {
