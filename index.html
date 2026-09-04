@@ -1110,9 +1110,29 @@ body.no-accents .hdr-track .ht-fill{background:var(--solid-accent)}
     color: var(--text-muted); max-width: 62ch; }
 .eb-btn.eb-missed:hover:not(:disabled) { border-color: var(--text-accent-2); color: var(--text-accent-2); }
 .eb-btn.eb-back { background: transparent; }
+/* The "other sets" area, ruled off from the exam-builder controls above it. */
+.eb-divider { height: 1px; background: var(--border-subtle); margin: 0.9rem 0 0.75rem; }
+.eb-sublabel { margin-bottom: 0.5rem; }
+.eb-btn.eb-custom:hover:not(:disabled),
+.eb-btn.eb-review:hover:not(:disabled) { border-color: var(--text-accent-2); color: var(--text-accent-2); }
+/* The typed question count sits in the same shell as the dropdowns. */
+.eb-num { width: 5.5rem; flex: 0 0 auto; background: var(--bg-body); color: var(--text-main);
+    border: 1px solid var(--border-color); border-radius: 8px; padding: 0.32rem 0.5rem;
+    font: inherit; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.eb-num:focus { outline: none; border-color: var(--text-accent); }
 .eb-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 .eb-btn:disabled:hover { border-color: var(--border-color); color: var(--text-main); }
 #wrongset-banner { display: none; }
+/* Reviewing is a read-back of earlier attempts, not an attempt of its own, so
+   there is nothing on the page to reset - and a reset there would only blank
+   the questions being read. Both Reset quiz buttons go away for it. */
+body.set-review #reset-quiz-btn,
+body.set-review #reset-top-btn { display: none !important; }
+/* Nor is a retry pass over a read-back meaningful: retrying what was missed is
+   what the missed-questions set is for. */
+body.set-review #tutor-retry-top,
+body.set-review #tutor-retry-btn,
+body.set-review #tt-retry-btn { display: none !important; }
 /* Shown instead of the classic layout, which this page cannot use. */
 #classic-unavailable { position: fixed; inset: 0; z-index: 99999; display: flex;
     align-items: center; justify-content: center; padding: 2rem;
@@ -1152,7 +1172,9 @@ body.no-accents .hdr-track .ht-fill{background:var(--solid-accent)}
     border-radius: 9px; padding: 0.42rem 0.75rem; font: inherit; font-size: 0.78rem;
     font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.16s; }
 .eb-btn:hover { border-color: var(--text-accent); color: var(--text-accent); transform: translateY(-1px); }
-.eb-btn.danger-outline:hover { border-color: #f87171; color: #f87171; }
+/* A reset button reads as a reset before it is hovered, matching Reset quiz. */
+.eb-btn.danger-outline { color: #f87171; border-color: rgba(248,113,113,0.5); }
+.eb-btn.danger-outline:hover { background: #f87171; color: #fff; border-color: #f87171; }
 .eb-btn.reset-armed { color: #fff; background: #f87171; border-color: #f87171; }
 .eb-stat { margin-top: 0.55rem; font-size: 0.72rem; color: var(--text-muted);
     font-variant-numeric: tabular-nums; }
@@ -1430,8 +1452,32 @@ body.hide-lectures .nav-section-label { display: none; }
                             <span class="eb-box" aria-hidden="true"></span>
                             Randomize lecture order
                         </button>
-                        <button class="eb-btn eb-missed" id="missed-btn" onclick="setExamSet('wrong')" title="Build a set from the questions you have answered incorrectly">&#128257; Missed questions</button>
-                        <button class="eb-btn danger-outline" id="reset-history-btn" onclick="resetHistoryClick(this)" title="Forget which questions have already been answered, so the whole bank counts as fresh again">Reset question history</button>
+                        <button class="eb-btn danger-outline eb-span2" id="reset-history-btn" onclick="resetHistoryClick(this)" title="Forget which questions have already been answered, so the whole bank counts as fresh again">Reset question history</button>
+                    </div>
+                    <div id="eb-other">
+                        <div class="eb-divider"></div>
+                        <div class="setup-label eb-sublabel">Other sets</div>
+                        <div class="eb-row">
+                            <button class="eb-btn eb-custom eb-span2" id="custom-btn" onclick="setExamSet('custom')" title="Draw a set of any size at random from the whole bank">&#127922; Custom set</button>
+                            <button class="eb-btn eb-missed" id="missed-btn" onclick="setExamSet('wrong')" title="Build a set from the questions you have answered incorrectly">&#128257; Retry missed questions</button>
+                            <button class="eb-btn eb-review" id="review-btn" onclick="setExamSet('review')" title="Read back every question you have answered, with its rationale open">&#128214; Review answered</button>
+                        </div>
+                    </div>
+                    <div class="eb-row" id="eb-custom" style="display:none">
+                        <div class="eb-field">
+                            <label class="eb-lab" for="custom-count">How many questions</label>
+                            <input type="number" id="custom-count" class="eb-num" min="1" step="1" value="20"
+                                   onchange="setCustomCount(this.value)" title="Type how many questions to draw at random from the bank">
+                        </div>
+                        <button class="eb-btn" id="custom-regen" onclick="rebuildExam()" title="Draw a new random set of that size">&#8635; New set</button>
+                        <button class="eb-btn eb-switch eb-span2" id="custom-shuffle" role="switch" aria-checked="false" onclick="toggleCustomShuffle()" title="Put the questions in a random order instead of course order">
+                            <span class="eb-box" aria-hidden="true"></span>
+                            Randomize question order
+                        </button>
+                        <button class="eb-btn eb-back eb-span2" onclick="setExamSet('normal')" title="Go back to the full practice exam">&larr; Back to the full exam</button>
+                    </div>
+                    <div class="eb-row" id="eb-review" style="display:none">
+                        <button class="eb-btn eb-back eb-span2" onclick="setExamSet('normal')" title="Go back to the full practice exam">&larr; Back to the full exam</button>
                     </div>
                     <div class="eb-row" id="eb-wrong" style="display:none">
                         <div class="eb-field">
@@ -1589,7 +1635,10 @@ const K = {
     ,setMode:   'q_' + QUIZ_ID + '_setMode'     // 'normal' | 'wrong' - which kind of set is on the page
     ,wrongCount:'q_' + QUIZ_ID + '_wrongCount'  // how many missed questions to show ('all' | a number)
     ,wrongShuffle: 'q_' + QUIZ_ID + '_wrongShuffle'  // shuffle the missed questions' order
-    ,stash:     'q_' + QUIZ_ID + '_stash'       // the exam parked while the missed set is on screen
+    ,stash:     'q_' + QUIZ_ID + '_stash'       // the exam parked while another set is on screen
+    ,given:     'q_' + QUIZ_ID + '_given'       // id -> the option chosen, so answers can be reviewed later
+    ,customCount:  'q_' + QUIZ_ID + '_customCount'    // how many questions a custom set draws
+    ,customShuffle:'q_' + QUIZ_ID + '_customShuffle'  // shuffle a custom set's order
 };
 
 const root = document.documentElement;
@@ -1954,6 +2003,8 @@ function updateNavCell(index) {
     if (isRevealed(index) && answers[index] != null) {
         const correct = answers[index] === quizData[index].correctAnswer;
         cell.classList.add(correct ? 'correct' : 'incorrect');
+    } else if (isRevealed(index) && typeof examSetMode === 'function' && examSetMode() === 'review') {
+        cell.classList.add('incorrect');   // answered and missed; the choice was never recorded
     }
 }
 
@@ -2073,6 +2124,8 @@ function revealAnswer(index) {
     let header = correct ? '✓ Correct' : '✗ Incorrect';
     let body = '';
     if (!correct) body += `<div class="fb-line">Correct answer: <strong>${data.correctAnswer}</strong></div>`;
+    if (chosen === undefined && typeof examSetMode === 'function' && examSetMode() === 'review')
+        body += '<div class="fb-line">Missed, but from before the chosen answer was saved, so the option picked is not recorded.</div>';
     body += `<div class="rationale"><strong>Rationale:</strong> ${escapeHtml(data.rationale)}</div>`;
     body += `<div class="source"><strong>Source:</strong> ${escapeHtml(data.source)}</div>`;
     fb.innerHTML = `<div class="feedback-header">${header}</div><div class="feedback-body">${body}</div>`;
@@ -2339,7 +2392,33 @@ function resetQuizClick(btn) {
 /* Reset everything for this quiz — usable any time (settings menu, end of
    quiz, or results). Clears local answers/flags/submissions; the saved
    directory score is left in place unless it's re-graded. */
+/* Resetting the answers on this page also hands its questions back to the
+   bank. They count as answered because they were answered here, so clearing
+   that attempt has to clear the record of it as well - otherwise a regenerated
+   exam would go on skipping questions whose answers no longer exist. This is
+   the current set only, whichever kind it is; forgetting the lot is still what
+   "Reset question history" is for. A review is a read-back of earlier attempts
+   rather than an attempt of its own, so it leaves the record alone. */
+function releaseCurrentQuestions() {
+    if (typeof examHistory !== 'function' || typeof QUESTION_BANK === 'undefined') return;
+    if (examSetMode() === 'review') return;
+    const history = examHistory(), wrong = wrongSet(), given = answeredMap();
+    let changed = false;
+    quizData.forEach(q => {
+        if (!q || !q.id) return;
+        if (history.delete(q.id)) changed = true;
+        if (wrong.delete(q.id)) changed = true;
+        if (given[q.id] !== undefined) { delete given[q.id]; changed = true; }
+    });
+    if (!changed) return;
+    save(K.history, Array.from(history));
+    save(K.wrong, Array.from(wrong));
+    save(K.given, given);
+    syncExamBuild();
+}
+
 function doResetQuiz() {
+    releaseCurrentQuestions();
     answers = {}; flags = {}; submitted = {}; graded = false; strikes = {}; highlights = {};
     save(K.answers, answers); save(K.flags, flags); save(K.submitted, submitted);
     save(K.strikes, strikes); save(K.hl, highlights);
@@ -2481,7 +2560,10 @@ function updateProgress() {
     const pool = (typeof tutorRetry !== 'undefined' && tutorRetry) ? tutorRetry.set
                : examPass ? examPass
                : quizData.map((_, i) => i);
-    const answered = pool.filter(i => answers[i] != null).length;
+    /* A review counts what was answered. One missed before the chosen option
+       was being kept has no answer to show, but it was still answered. */
+    const readBack = (typeof examSetMode === 'function' && examSetMode() === 'review');
+    const answered = pool.filter(i => answers[i] != null || (readBack && submitted[i])).length;
     const flagged = Object.keys(flags).length;
     document.getElementById('answered-count').textContent = answered;
     /* buildNavigator() writes the quiz length here; a pass overrides it. */
@@ -3084,7 +3166,50 @@ function markAnswered(index) {
         save(K.wrong, Array.from(wrong));
         changed = true;
     }
+
+    /* The option actually chosen, so the answer can be shown again later in a
+       review. Reviewing is the only thing that needs it, but it has to be
+       recorded at the moment of answering. */
+    const given = answeredMap();
+    if (given[q.id] !== answers[index]) {
+        given[q.id] = answers[index];
+        save(K.given, given);
+        changed = true;
+    }
     if (changed) syncExamBuild();
+}
+
+function answeredMap() { return load(K.given, {}); }
+
+/* Bank positions of every question that has been ANSWERED, in course order.
+   What has been answered is recorded in the history set; the map of chosen
+   options came later and is missing for anything answered before it existed,
+   so counting that map instead undercounts. */
+function answeredIndices() {
+    const history = examHistory();
+    const out = [];
+    QUESTION_BANK.forEach((q, i) => { if (history.has(q.id)) out.push(i); });
+    return out;
+}
+function answeredCount() { return answeredIndices().length; }
+
+/* Answers were counted before the chosen option was being kept. The ones
+   answered correctly can be recovered - the choice must have been the correct
+   option - so fill those in once. The ones missed cannot: which wrong option
+   was picked was never written down, so they are left out of a review rather
+   than invented. */
+function migrateAnsweredRecord() {
+    const given = answeredMap();
+    const history = examHistory();
+    const wrong = wrongSet();
+    const byId = new Map(QUESTION_BANK.map(q => [q.id, q]));
+    let added = 0;
+    history.forEach(id => {
+        if (given[id] !== undefined || wrong.has(id)) return;
+        const q = byId.get(id);
+        if (q) { given[id] = q.correctAnswer; added++; }
+    });
+    if (added) save(K.given, given);
 }
 
 /* Bank positions of the missed questions, in course order. */
@@ -3095,7 +3220,77 @@ function wrongIndices() {
     return out;
 }
 
-function isWrongMode() { return localStorage.getItem(K.setMode) === 'wrong'; }
+/* Which kind of set is on the page: the full exam, the questions missed, a
+   custom-sized random draw, or a read-back of everything answered. */
+const SET_MODES = ['normal', 'wrong', 'custom', 'review'];
+function examSetMode() {
+    const v = localStorage.getItem(K.setMode);
+    return SET_MODES.indexOf(v) > 0 ? v : 'normal';
+}
+function isWrongMode() { return examSetMode() === 'wrong'; }
+
+function customCountSetting() {
+    const n = parseInt(localStorage.getItem(K.customCount), 10);
+    return (n && n > 0) ? n : 20;
+}
+function customShuffleOn() { return localStorage.getItem(K.customShuffle) === 'true'; }
+
+/* What a custom set has to choose from: the whole bank minus everything that
+   has been answered. It pays no attention to lectures - that is the difference
+   from the exam draw - but an answered question is used up either way, and
+   comes back only when the question history is reset. */
+function customPool() {
+    const history = examHistory();
+    const out = [];
+    QUESTION_BANK.forEach((q, i) => { if (!history.has(q.id)) out.push(i); });
+    return out;
+}
+
+/* How many there were to choose from when the set on the page was drawn:
+   answering one shrinks the pool, and the message must not start claiming the
+   set is bigger than what was available. */
+function customPoolSize() {
+    const history = examHistory();
+    return customPool().length + quizData.filter(q => history.has(q.id)).length;
+}
+
+function drawCustomSet() {
+    let pick = customPool();
+    const want = Math.min(customCountSetting(), pick.length);
+    if (want < pick.length) pick = shuffleInPlace(pick.slice()).slice(0, want);
+    if (customShuffleOn()) shuffleInPlace(pick); else pick.sort((a, b) => a - b);
+    return pick;
+}
+
+/* Every question ever answered, in course order. */
+function drawReviewSet() { return answeredIndices(); }
+
+/* Put the recorded answers back on the page and open every rationale, so a
+   review reads exactly as it was left. */
+function applyReviewAnswers() {
+    const given = answeredMap();
+    const wrong = wrongSet();
+    answers = {}; submitted = {}; strikes = {}; highlights = {};
+    quizData.forEach((q, i) => {
+        submitted[i] = true;
+        if (given[q.id] !== undefined) answers[i] = given[q.id];
+        else if (!wrong.has(q.id)) answers[i] = q.correctAnswer;
+        /* Missed before the chosen option was being kept: still shown, still
+           counted as missed, but no option is selected - which one was picked
+           was never written down, and inventing it would be a lie. */
+    });
+    submitted.all = true;
+    graded = true;                 // exam mode reveals on `graded`, tutor on `submitted`
+    gradedSnapshot = null;         // ...but no score report: this is a read-back, not a grading
+    save(K.answers, answers); save(K.submitted, submitted); save(K.snapshot, null);
+}
+
+function drawSetFor(mode) {
+    if (mode === 'wrong')  return drawWrongSet();
+    if (mode === 'custom') return drawCustomSet();
+    if (mode === 'review') return drawReviewSet();
+    return drawExam(perTopicSetting());
+}
 function wrongCountSetting() { return localStorage.getItem(K.wrongCount) || 'all'; }
 function wrongShuffleOn() { return localStorage.getItem(K.wrongShuffle) === 'true'; }
 
@@ -3182,7 +3377,7 @@ function restoreExam() {
         saved.forEach(id => { const i = byId.get(id); if (i !== undefined) idx.push(i); });
         if (idx.length === saved.length) { setExam(idx); return; }
     }
-    setExam(isWrongMode() ? drawWrongSet() : drawExam(perTopicSetting()));
+    setExam(drawSetFor(examSetMode()));
 }
 
 /* A new set of questions makes the old answers meaningless - they are stored
@@ -3205,8 +3400,10 @@ function clearAnswerState() {
 /* Draw a new set - of whichever kind the page is currently on - and put the
    whole page back in step with it. */
 function rebuildExam() {
+    const m = examSetMode();
     clearAnswerState();
-    setExam(isWrongMode() ? drawWrongSet() : drawExam(perTopicSetting()));
+    setExam(drawSetFor(m));
+    if (m === 'review') applyReviewAnswers();
     renderQuiz();
     applyExamEmptyState();
     applyWrongBanner();
@@ -3240,16 +3437,27 @@ function stashNormalState() {
     });
 }
 
-/* Put the parked exam back. Anything re-answered during the review overrides
-   what was parked, so a question fixed in review returns marked correct -
-   that is the only thing allowed to differ. */
+/* Put the parked exam back. Anything re-answered while away overrides what was
+   parked, so a question fixed in the missed set returns marked correct - that
+   is the only thing allowed to differ.
+
+   The one thing that does not come back is a question that was UNANSWERED when
+   the exam was parked and has since been answered elsewhere - a custom set
+   drawing the same question, say. It has been used up, so it drops out here
+   just as it would on a regeneration. Questions answered on the exam itself
+   were already used up before parking and stay put, verdict and all. */
 function restoreNormalState() {
     const st = load(K.stash, null);
     if (!st || !st.ids || !st.ids.length) return false;
     const pos = new Map(QUESTION_BANK.map((q, i) => [q.id, i]));
-    const idx = [];
-    st.ids.forEach(id => { const i = pos.get(id); if (i !== undefined) idx.push(i); });
-    if (idx.length !== st.ids.length) return false;
+    if (st.ids.some(id => pos.get(id) === undefined)) return false;
+    const history = examHistory();
+    const idx = st.ids
+        .filter(id => st.answers[id] !== undefined || !history.has(id))
+        .map(id => pos.get(id));
+    /* Used up to the last question: there is nothing to restore, so the caller
+       draws a fresh exam instead of showing an empty one. */
+    if (!idx.length) { save(K.stash, null); return false; }
 
     const reviewed = {}, reviewedSubmitted = {};
     quizData.forEach((q, i) => {
@@ -3296,14 +3504,18 @@ function restoreNormalState() {
 
 /* Switch between the full exam and a set of the questions missed so far. */
 function setExamSet(which) {
-    const want = (which === 'wrong') ? 'wrong' : 'normal';
-    if (want === (isWrongMode() ? 'wrong' : 'normal')) return;   // already there
+    const want = SET_MODES.indexOf(which) > 0 ? which : 'normal';
+    const now = examSetMode();
+    if (want === now) return;                                   // already there
 
-    if (want === 'wrong') {
-        stashNormalState();
-        try { localStorage.setItem(K.setMode, 'wrong'); } catch (e) {}
+    if (want !== 'normal') {
+        /* Park the exam only when leaving it - going straight from one special
+           set to another must not overwrite what is parked. */
+        if (now === 'normal') stashNormalState();
+        try { localStorage.setItem(K.setMode, want); } catch (e) {}
         clearAnswerState();
-        setExam(drawWrongSet());
+        setExam(drawSetFor(want));
+        if (want === 'review') applyReviewAnswers();
     } else {
         const restored = restoreNormalState();
         try { localStorage.setItem(K.setMode, 'normal'); } catch (e) {}
@@ -3324,17 +3536,60 @@ function setExamSet(which) {
 }
 function setWrongCount(v) {
     try { localStorage.setItem(K.wrongCount, v); } catch (e) {}
-    rebuildExam();
+    if (examSetMode() === 'wrong') rebuildExam(); else syncExamBuild();
+}
+function setCustomCount(v) {
+    const n = Math.max(1, parseInt(v, 10) || 1);
+    try { localStorage.setItem(K.customCount, String(n)); } catch (e) {}
+    if (examSetMode() === 'custom') rebuildExam(); else syncExamBuild();
+}
+function toggleCustomShuffle() {
+    try { localStorage.setItem(K.customShuffle, customShuffleOn() ? 'false' : 'true'); } catch (e) {}
+    if (examSetMode() === 'custom') rebuildExam(); else syncExamBuild();
 }
 function toggleWrongShuffle() {
     try { localStorage.setItem(K.wrongShuffle, wrongShuffleOn() ? 'false' : 'true'); } catch (e) {}
-    rebuildExam();
+    if (examSetMode() === 'wrong') rebuildExam(); else syncExamBuild();
 }
 
 /* The banner above the questions while a missed-questions set is on the page. */
 function applyWrongBanner() {
+    const m = examSetMode();
     let b = document.getElementById('wrongset-banner');
-    if (!isWrongMode()) { if (b) b.remove(); return; }
+    if (m === 'normal') { if (b) b.remove(); return; }
+    /* An empty set explains itself in the notice above the questions, with its
+       own way back; a banner repeating it is just noise. */
+    if (!quizData.length) { if (b) b.remove(); return; }
+    if (m === 'custom' || m === 'review') {
+        if (!b) {
+            b = document.createElement('div');
+            b.id = 'wrongset-banner';
+            b.className = 'retry-banner';
+            const root = document.getElementById('quiz-root');
+            root.parentNode.insertBefore(b, root);
+        }
+        const n = quizData.length;
+        let msg;
+        if (m === 'custom') {
+            const asked = customCountSetting();
+            const avail = customPoolSize();
+            msg = (asked > avail)
+                ? '<span>\u{1F3B2} Only <b>' + avail + '</b> question' + (avail === 1 ? '' : 's') +
+                  ' in the bank ' + (avail === 1 ? 'has' : 'have') + ' not been answered yet, so all ' +
+                  avail + ' ' + (avail === 1 ? 'is' : 'are') + ' shown.</span>'
+                : '<span>\u{1F3B2} Custom set of <b>' + n + '</b> question' +
+                  (n === 1 ? '' : 's') + ' drawn at random from the bank.</span>';
+        } else {
+            msg = n
+                ? '<span>\u{1F4D6} Reviewing all <b>' + n + '</b> answered question' +
+                  (n === 1 ? '' : 's') + ', shown as they were answered.</span>'
+                : '<span>Nothing has been answered yet.</span>';
+        }
+        b.innerHTML = msg +
+            '<button class="results-btn" onclick="setExamSet(\'normal\')">Back to the full exam</button>';
+        b.style.display = 'flex';
+        return;
+    }
     if (!b) {
         b = document.createElement('div');
         b.id = 'wrongset-banner';
@@ -3366,9 +3621,11 @@ function applyWrongBanner() {
     b.style.display = 'flex';
 }
 
+/* A setting only redraws the set it belongs to. Changing the custom size while
+   the full exam is on screen must not throw that exam away. */
 function setPerTopic(v) {
     try { localStorage.setItem(K.perTopic, v); } catch (e) {}
-    regenerateExam();
+    if (examSetMode() === 'normal') rebuildExam(); else syncExamBuild();
 }
 
 function doResetHistory() {
@@ -3404,12 +3661,17 @@ function applyExamEmptyState() {
         el.className = 'exam-empty';
         root.parentNode.insertBefore(el, root);
     }
-    el.innerHTML = isWrongMode()
-        ? '<b>Nothing has been answered incorrectly yet.</b>' +
-          '<button class="eb-btn" onclick="setExamSet(\'normal\')">Back to the full exam</button>'
-        : '<b>Every question in the bank has been answered.</b>' +
-          '<button class="eb-btn danger-outline" onclick="resetHistoryClick(this)">' +
-          'Reset question history</button>';
+    const back = '<button class="eb-btn" onclick="setExamSet(\'normal\')">' +
+                 'Back to the full exam</button>';
+    const m = examSetMode();
+    const resetHist = '<button class="eb-btn danger-outline" onclick="resetHistoryClick(this)">' +
+                      'Reset question history</button>';
+    el.innerHTML =
+        (m === 'wrong')  ? '<b>Nothing has been answered incorrectly yet.</b>' + back :
+        (m === 'review') ? '<b>Nothing has been answered yet.</b>' + back :
+        (m === 'custom') ? '<b>Every question in the bank has been answered, ' +
+                           'so there is nothing left to draw a custom set from.</b>' + resetHist + back :
+        '<b>Every question in the bank has been answered.</b>' + resetHist;
 }
 
 function syncExamBuild() {
@@ -3419,12 +3681,40 @@ function syncExamBuild() {
     /* One settings block, two sets of controls: only the ones that apply to
        the kind of set on the page are shown, so the block never grows or
        reflows differently between the two. */
+    const m = examSetMode();
     const lab = document.getElementById('eb-label');
-    if (lab) lab.textContent = wrongMode ? 'Missed questions' : 'Practice exam';
-    const rowN = document.getElementById('eb-normal');
-    const rowW = document.getElementById('eb-wrong');
-    if (rowN) rowN.style.display = wrongMode ? 'none' : '';
-    if (rowW) rowW.style.display = wrongMode ? '' : 'none';
+    if (lab) lab.textContent = { normal: 'Practice exam', wrong: 'Missed questions',
+                                 custom: 'Custom set', review: 'Reviewing answers' }[m];
+    /* Exactly one control row is on show, plus the "other sets" area, which
+       belongs to the full exam only. */
+    [['eb-normal', 'normal'], ['eb-wrong', 'wrong'], ['eb-custom', 'custom'],
+     ['eb-review', 'review'], ['eb-other', 'normal']].forEach(([id, when]) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = (m === when) ? '' : 'none';
+    });
+
+    document.body.classList.toggle('set-review', m === 'review');
+
+    const cc = document.getElementById('custom-count');
+    if (cc) {
+        cc.value = customCountSetting();
+        cc.max = Math.max(1, m === 'custom' ? customPoolSize() : QUESTION_BANK.length);
+    }
+    const csh = document.getElementById('custom-shuffle');
+    if (csh) {
+        const on = customShuffleOn();
+        csh.classList.toggle('on', on);
+        csh.setAttribute('aria-checked', on ? 'true' : 'false');
+    }
+    const nAnswered = answeredCount();
+    const rb = document.getElementById('review-btn');
+    if (rb) {
+        rb.innerHTML = '\u{1F4D6} Review answered' + (nAnswered ? ' &middot; ' + nAnswered : '');
+        rb.disabled = nAnswered === 0;
+        rb.title = nAnswered ? 'Read back the ' + nAnswered + ' question' +
+                               (nAnswered > 1 ? 's' : '') + ' you have answered, rationales open'
+                             : 'Nothing has been answered yet';
+    }
 
     const sel = document.getElementById('per-topic-select');
     if (sel) sel.value = perTopicSetting();
@@ -3444,7 +3734,7 @@ function syncExamBuild() {
     }
     const mb = document.getElementById('missed-btn');
     if (mb) {
-        mb.innerHTML = '\u{1F501} Missed questions' + (nWrong ? ' &middot; ' + nWrong : '');
+        mb.innerHTML = '\u{1F501} Retry missed questions' + (nWrong ? ' &middot; ' + nWrong : '');
         mb.disabled = nWrong === 0;
         mb.title = nWrong ? 'Build a set from the ' + nWrong +
                             ' question' + (nWrong > 1 ? 's' : '') + ' you have answered incorrectly'
@@ -3453,12 +3743,26 @@ function syncExamBuild() {
 
     const stat = document.getElementById('eb-stat');
     if (stat) {
-        stat.innerHTML = wrongMode
-            ? '<b>' + nWrong + '</b> answered incorrectly &middot; <b>' + quizData.length +
-              '</b> on this page'
-            : '<b>' + TOPICS.length + '</b> lectures &middot; <b>' + QUESTION_BANK.length +
-              '</b> in the bank &middot; <b>' + (QUESTION_BANK.length - examHistory().size) +
-              '</b> not yet answered';
+        if (m === 'wrong') {
+            stat.innerHTML = '<b>' + nWrong + '</b> answered incorrectly &middot; <b>' +
+                quizData.length + '</b> on this page';
+        } else if (m === 'custom') {
+            stat.innerHTML = '<b>' + quizData.length + '</b> drawn at random from <b>' +
+                customPoolSize() + '</b> not yet answered';
+        } else if (m === 'review') {
+            /* Counted over what has been answered, so the three figures always
+               add up even if the missed list holds something the history does
+               not. */
+            const bad = wrongSet();
+            let missed = 0;
+            answeredIndices().forEach(i => { if (bad.has(QUESTION_BANK[i].id)) missed++; });
+            stat.innerHTML = '<b>' + nAnswered + '</b> answered &middot; <b>' +
+                (nAnswered - missed) + '</b> correct &middot; <b>' + missed + '</b> incorrect';
+        } else {
+            stat.innerHTML = '<b>' + TOPICS.length + '</b> lectures &middot; <b>' +
+                QUESTION_BANK.length + '</b> in the bank &middot; <b>' +
+                (QUESTION_BANK.length - nAnswered) + '</b> not yet answered';
+        }
     }
 }
 
@@ -3699,6 +4003,7 @@ function flashTutorRetry(msg) {
     syncGradeHero();
     // draw the exam (or restore the one already on the page) BEFORE the
     // first render - everything downstream reads quizData
+    migrateAnsweredRecord();   // recover what can be recovered of older answers
     restoreExam();
     syncExamBuild();
     // lecture titles stay hidden unless the header switch says otherwise
