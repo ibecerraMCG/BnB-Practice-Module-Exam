@@ -6,8 +6,46 @@
     <title>B&amp;B Practice Module Exam</title>
     <link rel="icon" href="data:image/svg+xml,&lt;svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22&gt;&lt;text y=%22.9em%22 font-size=%2290%22&gt;🧠&lt;/text&gt;&lt;/svg&gt;">
 
-    <!-- Umami Analytics — replace website-id with your quiz site ID when ready -->
-    <script defer src="https://cloud.umami.is/script.js" data-website-id="YOUR-QUIZ-WEBSITE-ID"></script>
+    <!-- Umami Analytics — the same website as the B&B directory, so a visit that
+         comes straight here (a bookmark, a shared link) still reaches the
+         directory's visitor counter. Auto-tracking is off: the one pageview is
+         sent by hand below, under the directory's own path, because that is the
+         path the counter reads. Nothing is shown on this page. -->
+    <script defer src="https://cloud.umami.is/script.js"
+            data-website-id="3cb2ed63-b477-4c85-a83f-7352712d49c9"
+            data-auto-track="false"></script>
+    <script>
+    /* One pageview, reported as the directory's path so the counter sees it,
+       with this page's own title so the two are still told apart in Umami.
+       The tracker is deferred, so wait for it rather than assuming it is there,
+       and give up quietly if it never arrives - analytics must never be able to
+       break the exam. */
+    (function () {
+        var COUNTED_AS = '/BnB-Practice-Quizzes/';
+        var TITLE = 'B&B Practice Module Exam';
+        var tries = 0;
+        function send() {
+            try {
+                if (window.umami && typeof window.umami.track === 'function') {
+                    window.umami.track(function (props) {
+                        var p = {};
+                        for (var k in props) if (Object.prototype.hasOwnProperty.call(props, k)) p[k] = props[k];
+                        p.url = COUNTED_AS;
+                        p.title = TITLE;
+                        return p;
+                    });
+                    return;
+                }
+            } catch (e) { return; }
+            if (++tries < 40) setTimeout(send, 250);   // ~10s, then let it go
+        }
+        if (document.readyState === 'loading') {
+            window.addEventListener('DOMContentLoaded', send);
+        } else {
+            send();
+        }
+    })();
+    </script>
 
     <style>
     /* ============================================================
