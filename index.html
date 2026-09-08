@@ -3718,8 +3718,26 @@ function setPerTopic(v) {
 }
 
 function doResetHistory() {
+    /* "The whole bank counts as unanswered again" - so every record of having
+       answered goes with it. Clearing the history alone left three things
+       behind that still described the old state: the missed list (which kept a
+       "Retry missed questions" count for questions that no longer count as
+       answered), the record of which option was chosen, and the exam parked
+       behind a special set. */
     save(K.history, []);
-    syncExamBuild();
+    save(K.wrong, []);
+    save(K.given, {});
+    try { localStorage.removeItem(K.stash); } catch (e) {}
+
+    /* The exam on screen is derived state too. It was drawn under the old
+       history, and a lecture whose questions were used up drops out of a draw
+       entirely - which is how an 85-lecture bank could sit behind an
+       81-question exam with everything reported as unanswered. The missed and
+       review sets are empty by definition now, so those would leave an empty
+       page. Drawing the exam again puts every count back in step with the bank
+       the page now claims to have. */
+    try { localStorage.setItem(K.setMode, 'normal'); } catch (e) {}
+    rebuildExam();
 }
 
 /* The same two-click confirm as Reset quiz, sharing its disarm machinery so
