@@ -2092,9 +2092,17 @@ function visibleQuestions() {
 /* ============================================================
    ANSWER SELECTION + FLAGGING
 ============================================================ */
+/* A read-back shows answers given earlier; answering again there would rewrite
+   the record it is reading. Blocked at the source, so the keyboard cannot do
+   what the mouse is stopped from doing. */
+function isReadBack() {
+    return typeof examSetMode === 'function' && examSetMode() === 'review';
+}
+
 function selectOption(index, key) {
     // Exam mode locks after grading; tutor mode always allows changing the answer.
     if (mode === 'exam' && graded) return;
+    if (isReadBack()) return;
     answers[index] = key;
     save(K.answers, answers);
     markAnswered(index);   // this question is now used up
@@ -2161,7 +2169,7 @@ function revealAnswer(index) {
     const card = document.getElementById('q-card-' + index);
     const chosen = answers[index];
     const correct = chosen === data.correctAnswer;
-    const lockOptions = (mode === 'exam');  // tutor mode stays re-answerable
+    const lockOptions = (mode === 'exam') || isReadBack();  // tutor mode stays re-answerable, a review never is
 
     card.querySelectorAll('.option-label').forEach(l => {
         // clear any previous reveal state first (so re-grading is clean)
