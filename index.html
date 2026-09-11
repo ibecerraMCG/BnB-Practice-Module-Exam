@@ -24,6 +24,9 @@
         var COUNTED_AS = '/BnB-Practice-Quizzes/';
         var TITLE = 'B&B Practice Module Exam';
         var tries = 0;
+        /* Only the real page counts - not a copy served from anywhere else. */
+        if (location.hostname !== 'ibecerramcg.github.io' ||
+            !/^\/BnB-Practice-Module-Exam(\/|$)/i.test(location.pathname)) return;
         function send() {
             try {
                 if (window.umami && typeof window.umami.track === 'function') {
@@ -1361,6 +1364,93 @@ body.pad-live:not(.pad-noring) .question-card.pad-focus {
     .pad-grid .pad-col.k, .pad-grid .pad-bind.key { grid-column: 2; }
 }
 </style>
+<style id="sync-style">
+/* ============================================================
+   BACKUP & SYNC
+============================================================ */
+.bk-block { margin-top: 1.15rem; }
+/* The same card as the Live score toggle, outlined in a quiet green: the
+   theme's own green taken darker, so it sits with the page's muted colours on
+   dark themes and stays readable on light ones. */
+.bk-main { display: flex; align-items: center; justify-content: center; width: 100%; padding: .8rem .95rem;
+    border-radius: 12px; cursor: pointer; font: inherit; text-align: center; background: var(--bg-card);
+    border: 1.5px solid #20835f; color: #279e73;
+    border-color: color-mix(in srgb, var(--live-dot, #34d399) 62%, #000);
+    color: color-mix(in srgb, var(--live-dot, #34d399) 76%, #000);
+    transition: border-color .16s, background .16s, color .16s; }
+.bk-main:hover { background: var(--bg-card-hover);
+    border-color: color-mix(in srgb, var(--live-dot, #34d399) 80%, #000);
+    color: color-mix(in srgb, var(--live-dot, #34d399) 90%, #000); }
+.bk-main .bk-title { font-size: .92rem; font-weight: 700; }
+.bk-note b { color: var(--text-main); }
+.bk-sync-line { display: flex; align-items: center; gap: 7px; margin: .6rem .15rem 0; padding: 0;
+    background: none; border: 0; font: inherit; font-size: .74rem; color: var(--text-muted);
+    cursor: pointer; text-align: left; }
+.bk-sync-line:hover .bk-sync-text { color: var(--text-accent); text-decoration: underline; }
+.bk-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-color); flex: none; }
+.bk-sync-line.on .bk-dot { background: #4ade80; box-shadow: 0 0 0 3px rgba(74,222,128,.18); }
+.bk-sync-line.err .bk-dot { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.18); }
+
+#bk-overlay { display: none; position: fixed; inset: 0; z-index: 520;
+    background: rgba(0,0,0,.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    padding: clamp(1rem, 4vh, 3rem) 1rem; overflow-y: auto; }
+#bk-overlay.open { display: flex; align-items: flex-start; justify-content: center; }
+#bk-overlay .pad-card { max-width: 520px; }
+#bk-overlay [hidden] { display: none !important; }
+.bk-sec + .bk-sec { border-top: 1px solid var(--border-color); margin-top: 1.15rem; padding-top: 1.1rem; }
+.bk-h { font-size: .64rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: .65rem; }
+.bk-btns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.bk-btn { font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; padding: .5rem .85rem;
+    border-radius: 9px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-main); }
+.bk-btn:hover { border-color: var(--text-accent); color: var(--text-accent); }
+.bk-btn.bk-acc { background: var(--button-bg); border-color: var(--button-bg); color: var(--button-text); }
+.bk-btn.bk-acc:hover { filter: brightness(1.08); color: var(--button-text); }
+.bk-btn.bk-danger { background: #f87171; border-color: #f87171; color: #fff; }
+.bk-btn.bk-danger-o { color: #f87171; border-color: rgba(248,113,113,.5); background: transparent; }
+.bk-btn.bk-danger-o:hover, .bk-btn.bk-danger-o.armed { background: #f87171; color: #fff; border-color: #f87171; }
+.bk-note { font-size: .74rem; line-height: 1.5; color: var(--text-muted); margin: .55rem 0 0; }
+.bk-note:empty { display: none; }
+.bk-lab { display: block; font-size: .74rem; color: var(--text-muted); margin: .95rem 0 .4rem; }
+.bk-in { flex: 1 1 12rem; min-width: 0; padding: .48rem .7rem; border-radius: 9px;
+    border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-main);
+    font: 600 .85rem ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .02em; }
+.bk-in:focus { outline: none; border-color: var(--text-accent); }
+.bk-confirm { margin-top: .8rem; padding: .75rem .85rem; border-radius: 10px; font-size: .8rem; line-height: 1.5;
+    color: var(--text-main); background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.4); }
+.bk-confirm .bk-btns { margin-top: .6rem; }
+.bk-msg { font-size: .78rem; margin: .7rem 0 0; color: var(--text-muted); }
+.bk-msg:empty { display: none; }
+.bk-msg.ok { color: #4ade80; } .bk-msg.warn { color: #f59e0b; } .bk-msg.bad { color: #f87171; }
+#bk-toast { position: fixed; left: 50%; bottom: 22px; z-index: 610; max-width: calc(100vw - 2rem);
+    transform: translateX(-50%) translateY(140%); opacity: 0; pointer-events: none;
+    padding: .7rem 1.1rem; border-radius: 12px; font-size: .85rem; font-weight: 600;
+    background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color);
+    box-shadow: 0 14px 40px rgba(0,0,0,.4); transition: transform .28s ease, opacity .28s ease; }
+#bk-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+/* Newer progress from another device: stays until it is acted on. */
+#sync-prompt { position: fixed; left: 50%; bottom: 22px; z-index: 615; display: flex; align-items: center; gap: 10px;
+    max-width: calc(100vw - 2rem); padding: .55rem .6rem .55rem 1rem; border-radius: 12px;
+    font-size: .85rem; font-weight: 600; background: var(--bg-card); color: var(--text-main);
+    border: 1px solid var(--border-color); box-shadow: 0 14px 40px rgba(0,0,0,.4);
+    transform: translateX(-50%) translateY(160%); opacity: 0; pointer-events: none;
+    transition: transform .28s ease, opacity .28s ease; }
+#sync-prompt.show { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto; }
+#sync-prompt .sp-go { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 11px;
+    border: 0; border-radius: 8px; background: #22c55e; color: #fff; font: inherit; font-size: .76rem;
+    font-weight: 700; cursor: pointer; white-space: nowrap; animation: sp-pulse 2s infinite; }
+#sync-prompt .sp-go:hover { opacity: .9; }
+#sync-prompt .sp-x { height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border-color);
+    background: transparent; color: var(--text-muted); font: inherit; font-size: .74rem; font-weight: 600;
+    cursor: pointer; white-space: nowrap; }
+#sync-prompt .sp-x:hover { color: var(--text-main); border-color: var(--text-muted); }
+@keyframes sp-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(34,197,94,.6); }
+    70% { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+    100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }
+/* the brief notices move up out of its way */
+body.sync-prompting #pad-toast, body.sync-prompting #bk-toast { bottom: 84px; }
+</style>
 </head>
 
 <body>
@@ -1682,6 +1772,13 @@ body.pad-live:not(.pad-noring) .question-card.pad-focus {
                         <span class="st-box" aria-hidden="true"></span>
                         <span class="st-text"><span class="st-title">Live score</span><span class="st-sub">Running tally as you answer</span></span>
                     </button>
+                    <div class="bk-block" id="bk-block">
+                        <div class="setup-label">Your progress</div>
+                        <button class="bk-main" id="bk-open" onclick="bkOpen()" title="Save a backup file, restore one, or sync your progress across devices">
+                            <span class="bk-title">Auto-Sync Progress / Backup &amp; Restore</span>
+                        </button>
+                        <button class="bk-sync-line" id="bk-sync-line" onclick="bkOpen('sync')" title="Sync your progress across devices automatically"><span class="bk-dot" aria-hidden="true"></span><span class="bk-sync-text">Auto-sync is off</span></button>
+                    </div>
                 </div>
                 </div>
             </div>
@@ -5551,6 +5648,8 @@ function padDo(action, fromKey) {
        on - and it must not close the panel, or there is no way to see what the
        page thinks you pressed. It closes on the ✕, on Done, or on Esc. */
     if (document.getElementById('pad-overlay').classList.contains('open')) return;
+    const bkPanel = document.getElementById('bk-overlay');
+    if (bkPanel && bkPanel.classList.contains('open')) return;
     const help = document.getElementById('help-overlay');
     if (help && help.classList.contains('open')) { if (typeof closeHelp === 'function') closeHelp(); return; }
 
@@ -5880,6 +5979,635 @@ function padToast(msg) {
 }
 
 padSyncSettings();
+</script>
+<div id="bk-overlay" role="dialog" aria-modal="true" aria-labelledby="bk-title">
+    <div class="pad-card">
+        <div class="pad-head">
+            <span aria-hidden="true">&#128190;</span>
+            <h2 id="bk-title">Your progress</h2>
+            <button class="pad-close" onclick="bkClose()" aria-label="Close">&#10005;</button>
+        </div>
+        <div class="pad-body">
+            <div class="bk-sec" id="bk-sync">
+                <div class="bk-h">Auto-sync</div>
+                <p class="bk-note" id="sync-about" style="margin-top:0">Turn this on to auto-save as you work. Copy the code to another device to link it and continue your progression.</p>
+                <div id="sync-off">
+                    <div class="bk-btns" style="margin-top:.8rem">
+                        <button class="bk-btn bk-acc" id="sync-create" onclick="syncCreate()">Turn on sync</button>
+                    </div>
+                    <label class="bk-lab" for="sync-code-in">Already have a code? Enter it to restore your progress or continue from another device.</label>
+                    <div class="bk-btns">
+                        <input id="sync-code-in" class="bk-in" placeholder="bnb-xxxxx-xxxxx-xxxxx-xxxxx" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40">
+                        <button class="bk-btn" id="sync-link" onclick="syncLink()">Link</button>
+                    </div>
+                </div>
+                <div id="sync-on" hidden>
+                    <label class="bk-lab" for="sync-code-out">Your sync code</label>
+                    <div class="bk-btns">
+                        <input id="sync-code-out" class="bk-in" readonly>
+                        <button class="bk-btn" onclick="syncCopy()">Copy</button>
+                        <button class="bk-btn" id="sync-now" onclick="syncNow()">Sync now</button>
+                    </div>
+                    <p class="bk-note" id="sync-status"></p>
+                    <p class="bk-note" id="sync-keep">Save this code somewhere safe. You'll need it if your device accidentally erases your progress.</p>
+                    <div class="bk-btns" style="margin-top:.8rem">
+                        <button class="bk-btn bk-danger-o" id="sync-off-btn" onclick="syncOff(this)">Turn off on this device</button>
+                    </div>
+                </div>
+                <p class="bk-msg" id="sync-msg" role="status"></p>
+            </div>
+            <div class="bk-sec">
+                <div class="bk-h">Manual backup file</div>
+                <div class="bk-btns">
+                    <button class="bk-btn" id="bk-save" onclick="bkSave()">&#11015; Save backup file</button>
+                    <button class="bk-btn" id="bk-restore" onclick="bkPick()">&#11014; Restore from file</button>
+                    <input type="file" id="bk-file" hidden onchange="bkRead(this)">
+                </div>
+                <p class="bk-note" id="bk-last"></p>
+                <div class="bk-confirm" id="bk-confirm" hidden>
+                    <div id="bk-confirm-text"></div>
+                    <div class="bk-btns">
+                        <button class="bk-btn bk-danger" id="bk-apply" onclick="bkApply()">Replace</button>
+                        <button class="bk-btn" onclick="bkCancel()">Cancel</button>
+                    </div>
+                </div>
+                <p class="bk-msg" id="bk-msg" role="status"></p>
+                <p class="bk-note" id="bk-about">Manually save a small backup file to prevent quiz data from being lost. Unnecessary if you turn on sync and save the code.</p>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="sync-prompt" role="status" aria-live="polite">
+    <span>Newer progress from your other device</span>
+    <button class="sp-go" id="sync-refresh" onclick="syncApply()" title="Reload the page to show it">&#10024; Refresh</button>
+    <button class="sp-x" id="sync-dismiss" onclick="syncDismiss()" title="Hide this. The page catches up the next time it is opened.">Dismiss</button>
+</div>
+<script id="sync-script">
+/* ============================================================
+   BACKUP & SYNC
+
+   Everything this quiz keeps lives under one prefix, so a backup is simply
+   those keys, and sync is those keys kept the same on every device.
+
+   Restoring - from a file or from another device - writes the keys back and
+   reloads, so the page's own start-up does the restoring. The page holds its
+   answers in memory and writes them back whole, so storage must never be
+   changed underneath a page that is still running.
+
+   Sync: changes go up at most once a minute, and at once when the tab is
+   hidden. The server's copy is fetched when the page opens, when the tab or
+   window comes back, and on the first click after a couple of minutes away.
+   Newer progress found as the page opens is simply put in place. Found while
+   the page is in use, it is held, and a Refresh button offered; meanwhile
+   this device's work goes up combined with it, so dismissing the button
+   loses nothing. The server only accepts a save made from the revision it
+   holds, so two devices can never overwrite each other. Combining keeps this
+   device's page and merges the record of what was answered, missed and chosen.
+============================================================ */
+const BK_QUIZ = QUIZ_ID;
+const BK_PREFIX = 'q_' + QUIZ_ID + '_';
+const BK_TITLE = 'B&B Practice Module Exam';
+const BK_FILE = 'BnB-Module-Exam-backup';
+/* The sync server. Served from Cloudflare itself, the page uses its own
+   address; anywhere else - GitHub Pages - it uses this one. */
+const SYNC_API = 'https://bnb-quiz-sync.pages.dev/api/sync';
+const SYNCK = { cfg: 'bb_sync', meta: 'bb_syncMeta', api: 'bb_syncApi', backup: 'bb_backupAt' };
+const SYNC_ABC = '23456789abcdefghjkmnpqrstuvwxyz';      // no 0/o or 1/l/i to misread
+const BK_H = BK_PREFIX + 'history', BK_W = BK_PREFIX + 'wrong', BK_G = BK_PREFIX + 'given';
+/* At most one save a minute while studying - however fast the clicking - and
+   at once when the tab is left. That caps each student at 60 saves an hour. */
+const SYNC_EVERY = 60000;
+
+/* ------------------------------------------------------------ the data */
+function bkKeys() {
+    const out = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf(BK_PREFIX) === 0) out.push(k);
+    }
+    return out.sort();
+}
+function bkSnapshot() { const o = {}; bkKeys().forEach(k => { o[k] = localStorage.getItem(k); }); return o; }
+function bkCanon(o) { const c = {}; Object.keys(o).sort().forEach(k => { c[k] = o[k]; }); return JSON.stringify(c); }
+function bkHash(str) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+    return (h >>> 0).toString(36) + '.' + str.length;
+}
+function bkList(v) { try { const a = JSON.parse(v || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+function bkObj(v) {
+    try { const o = JSON.parse(v || '{}'); return (o && typeof o === 'object' && !Array.isArray(o)) ? o : {}; }
+    catch (e) { return {}; }
+}
+function bkCount(state) { return bkList(state[BK_H]).length; }
+function bkPlural(n) { return n + ' answered question' + (n === 1 ? '' : 's'); }
+
+let bkApplying = false;
+function bkWrite(state) {
+    const before = bkSnapshot();
+    bkApplying = true;
+    try {
+        Object.keys(before).forEach(k => { if (!(k in state)) localStorage.removeItem(k); });
+        Object.keys(state).forEach(k => {
+            if (k.indexOf(BK_PREFIX) === 0 && typeof state[k] === 'string') localStorage.setItem(k, state[k]);
+        });
+    } catch (e) {
+        /* out of room part-way through: put back exactly what was there */
+        try {
+            bkKeys().forEach(k => localStorage.removeItem(k));
+            Object.keys(before).forEach(k => localStorage.setItem(k, before[k]));
+        } catch (e2) {}
+        throw e;
+    } finally { bkApplying = false; }
+}
+
+/* ------------------------------------------------------------ words */
+function bkWhen(ms) {
+    const d = new Date(ms), now = new Date();
+    const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return d.toDateString() === now.toDateString() ? t
+         : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + t;
+}
+function bkSay(id, text, kind) {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = text || ''; el.className = 'bk-msg' + (kind ? ' ' + kind : ''); }
+}
+function bkMsg(text, kind) { bkSay('bk-msg', text, kind); }
+function syncMsg(text, kind) { bkSay('sync-msg', text, kind); }
+function bkToast(text) {
+    let t = document.getElementById('bk-toast');
+    if (!t) { t = document.createElement('div'); t.id = 'bk-toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+    t.textContent = text;
+    requestAnimationFrame(() => t.classList.add('show'));
+    clearTimeout(bkToast.t);
+    bkToast.t = setTimeout(() => t.classList.remove('show'), 4500);
+}
+/* A word to show once the page has reloaded. */
+function bkAfterReload(text) { try { sessionStorage.setItem('bk_note', text); } catch (e) {} }
+
+/* ------------------------------------------------------ the backup file */
+function bkStamp() {
+    const d = new Date(), p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+function bkSave() {
+    const data = bkSnapshot();
+    const file = { format: 'bnb-quiz-backup', version: 1, quiz: BK_QUIZ, title: BK_TITLE,
+                   saved: new Date().toISOString(), data: data };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(file)], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = BK_FILE + '-' + bkStamp() + '.json'; a.style.display = 'none';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    const at = bkObj(localStorage.getItem(SYNCK.backup)); at[BK_QUIZ] = Date.now();
+    try { localStorage.setItem(SYNCK.backup, JSON.stringify(at)); } catch (e) {}
+    bkMsg('Backup saved · ' + bkPlural(bkCount(data)) + '.', 'ok');
+    syncUI();
+}
+
+let bkPending = null;
+function bkPick() { const f = document.getElementById('bk-file'); f.value = ''; f.click(); }
+function bkRead(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    bkCancel();
+    if (file.size > 5000000) { bkMsg('That file is too big to be a backup.', 'bad'); return; }
+    const r = new FileReader();
+    r.onload = () => bkOffer(String(r.result));
+    r.onerror = () => bkMsg("Couldn't read that file.", 'bad');
+    r.readAsText(file);
+}
+function bkOffer(text) {
+    let j = null;
+    try { j = JSON.parse(text); } catch (e) {}
+    if (!j || j.format !== 'bnb-quiz-backup' || !j.data || typeof j.data !== 'object') {
+        bkMsg("That isn't a backup file from these quizzes.", 'bad'); return;
+    }
+    if (j.quiz !== BK_QUIZ) {
+        bkMsg('That backup is for a different quiz' +
+              (j.title ? ' (' + String(j.title) + ')' : '') + '.', 'bad');
+        return;
+    }
+    const data = {};
+    Object.keys(j.data).forEach(k => {
+        if (k.indexOf(BK_PREFIX) === 0 && typeof j.data[k] === 'string') data[k] = j.data[k];
+    });
+    bkPending = data;
+    const when = Date.parse(j.saved);
+    const box = document.getElementById('bk-confirm-text');
+    box.textContent = '';
+    box.append('Backup from ');
+    const b1 = document.createElement('b'); b1.textContent = isNaN(when) ? 'an unknown date' : bkWhen(when); box.append(b1);
+    box.append(' · ');
+    const b2 = document.createElement('b'); b2.textContent = bkPlural(bkCount(data)); box.append(b2);
+    box.append('. This replaces the progress on this device.');
+    document.getElementById('bk-confirm').hidden = false;
+    bkMsg('');
+}
+function bkCancel() { bkPending = null; const c = document.getElementById('bk-confirm'); if (c) c.hidden = true; }
+function bkApply() {
+    if (!bkPending) return;
+    const n = bkCount(bkPending);
+    try { bkWrite(bkPending); }
+    catch (e) { bkMsg("Couldn't restore: this browser is out of storage space.", 'bad'); return; }
+    bkPending = null;
+    bkAfterReload('Progress restored · ' + bkPlural(n) + '.');
+    location.reload();
+}
+
+/* ---------------------------------------------------------- sync: state */
+function syncCfg() {
+    try { const c = JSON.parse(localStorage.getItem(SYNCK.cfg)); return (c && c.id) ? c : null; }
+    catch (e) { return null; }
+}
+function syncMetaAll() { return bkObj(localStorage.getItem(SYNCK.meta)); }
+function syncMeta() { return Object.assign({ rev: 0, hash: '' }, syncMetaAll()[BK_QUIZ] || {}); }
+function syncSetMeta(patch) {
+    const all = syncMetaAll();
+    all[BK_QUIZ] = Object.assign(syncMeta(), patch);
+    try { localStorage.setItem(SYNCK.meta, JSON.stringify(all)); } catch (e) {}
+}
+function syncApi() {
+    let o = null;
+    try { o = localStorage.getItem(SYNCK.api); } catch (e) {}
+    if (o) return o;
+    if (/\.pages\.dev$/i.test(location.hostname)) return location.origin + '/api/sync';
+    return SYNC_API;
+}
+function syncDirty() { return bkHash(bkCanon(bkSnapshot())) !== syncMeta().hash; }
+function syncWhy(e) {
+    const m = String((e && e.message) || e || '');
+    return (!m || /fetch|network|load failed|offline/i.test(m)) ? 'offline' : m;
+}
+
+/* A code is 19 random characters and a check character, so a mistyped code is
+   caught here instead of quietly starting an empty record. */
+function syncCheckChar(body) {
+    let s = 0;
+    for (let i = 0; i < body.length; i++) s = (s * 7 + SYNC_ABC.indexOf(body[i]) + 1) % 31;
+    return SYNC_ABC[s];
+}
+function syncNewCode() {
+    const bytes = new Uint8Array(64);
+    let body = '';
+    while (body.length < 19) {
+        crypto.getRandomValues(bytes);
+        for (const b of bytes) if (b < 248 && body.length < 19) body += SYNC_ABC[b % 31];
+    }
+    return 'bnb-' + body + syncCheckChar(body);
+}
+function syncParse(text) {
+    let c = String(text || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (c.length === 23 && c.indexOf('bnb') === 0) c = c.slice(3);
+    if (c.length !== 20) return null;
+    for (const ch of c) if (SYNC_ABC.indexOf(ch) < 0) return null;
+    return syncCheckChar(c.slice(0, 19)) === c[19] ? 'bnb-' + c : null;
+}
+function syncShow(id) { return 'bnb-' + id.slice(4).match(/.{1,5}/g).join('-'); }
+
+/* ------------------------------------------- sync: noticing a change */
+let syncTimer = null, syncBusy = false, syncAgain = false, syncPulledAt = 0;
+/* Newer progress from another device, held until the page is refreshed. */
+let syncRemote = null, syncPromptDismissed = false, syncActiveAt = Date.now();
+(function () {
+    const P = Storage.prototype, set = P.setItem, rem = P.removeItem, clr = P.clear;
+    function isLocal(store) { try { return store === window.localStorage; } catch (e) { return false; } }
+    function touched(store, k) {
+        if (bkApplying || !isLocal(store)) return;
+        if (k !== null && String(k).indexOf(BK_PREFIX) !== 0) return;
+        syncLater();
+    }
+    P.setItem = function (k, v) { const r = set.apply(this, arguments); touched(this, k); return r; };
+    P.removeItem = function (k) { const r = rem.apply(this, arguments); touched(this, k); return r; };
+    P.clear = function () { const r = clr.apply(this, arguments); touched(this, null); return r; };
+})();
+function syncLater() {
+    if (!syncCfg() || syncTimer) return;          // a save is already on its way
+    syncTimer = setTimeout(() => { syncTimer = null; syncPush(); }, SYNC_EVERY);
+}
+/* Let whatever is already talking to the server finish first. */
+async function syncSettle() { while (syncBusy) await new Promise(r => setTimeout(r, 50)); }
+
+/* ------------------------------------------ sync: talking to the server */
+function syncGet(id) {
+    return fetch(syncApi() + '?id=' + encodeURIComponent(id) + '&quiz=' + encodeURIComponent(BK_QUIZ),
+                 { cache: 'no-store' })
+        .then(r => r.json().catch(() => ({})).then(d => {
+            if (!r.ok) throw new Error(d.error || ('server said ' + r.status));
+            return d;
+        }));
+}
+
+/* Bring the server's copy into this device. Nothing new here: take it as it
+   is. Changes on both sides: combine. Says whether anything here changed. */
+function syncTake(data, preferRemotePage) {
+    const remote = (data && data.state && typeof data.state === 'object' && !Array.isArray(data.state))
+                 ? data.state : null;
+    const local = bkSnapshot(), localCanon = bkCanon(local);
+    const dirty = bkHash(localCanon) !== syncMeta().hash;
+    let next = local;
+    if (remote) next = !dirty ? remote : preferRemotePage ? syncMerge(remote, local) : syncMerge(local, remote);
+    syncSetMeta({ rev: (data && data.rev) || 0, hash: remote ? bkHash(bkCanon(remote)) : '' });
+    if (bkCanon(next) === localCanon) return false;
+    bkWrite(next);
+    return true;
+}
+/* One page's state, whole (it only makes sense as a set), with the record of
+   what has been answered, missed and chosen taken from both. */
+function syncMerge(base, other) {
+    const out = Object.assign({}, base);
+    [BK_H, BK_W].forEach(k => {
+        if (base[k] == null && other[k] == null) return;
+        out[k] = JSON.stringify(Array.from(new Set(bkList(other[k]).concat(bkList(base[k])))));
+    });
+    if (base[BK_G] != null || other[BK_G] != null) {
+        out[BK_G] = JSON.stringify(Object.assign({}, bkObj(other[BK_G]), bkObj(base[BK_G])));
+    }
+    return out;
+}
+
+/* What this device should hold, given a newer copy from the server: that copy
+   as it is if nothing has changed here since the last sync, otherwise the two
+   combined, keeping this device's page. */
+function syncNext(local, remote) {
+    return bkHash(bkCanon(local)) !== syncMeta().hash ? syncMerge(local, remote) : remote;
+}
+
+/* The server has a copy this page has not seen. If taking it would change
+   nothing here, just note it; otherwise hold it and offer a refresh. Says
+   whether something is now being held. */
+function syncNotice(data) {
+    const remote = (data && data.state && typeof data.state === 'object' && !Array.isArray(data.state))
+                 ? data.state : null;
+    const rev = (data && data.rev) || 0;
+    if (!remote) {                          // nothing up there (a new code, or cleared): ours goes up
+        syncRemote = null; syncSetMeta({ rev: 0, hash: '' }); syncPromptUI();
+        return false;
+    }
+    const local = bkSnapshot();
+    if (bkCanon(syncNext(local, remote)) === bkCanon(local)) {
+        syncRemote = null; syncSetMeta({ rev: rev, hash: bkHash(bkCanon(remote)) }); syncPromptUI();
+        return false;
+    }
+    if (!syncRemote || syncRemote.rev !== rev) syncPromptDismissed = false;   // something new: ask again
+    syncRemote = { rev: rev, state: remote };
+    syncPromptUI();
+    return true;
+}
+
+/* Refresh: put the held copy in place and reload, so the page's own start-up
+   shows it. */
+function syncApply() {
+    if (syncRemote) {
+        const next = syncNext(bkSnapshot(), syncRemote.state);
+        const meta = { rev: syncRemote.rev, hash: bkHash(bkCanon(syncRemote.state)) };
+        try { bkWrite(next); }
+        catch (e) { bkToast("Couldn't update: this browser is out of storage space."); return; }
+        syncSetMeta(meta);
+        syncRemote = null;
+        bkAfterReload('Progress updated from your other device.');
+    }
+    location.reload();
+}
+function syncDismiss() { syncPromptDismissed = true; syncPromptUI(); }
+function syncPromptUI() {
+    const show = !!(syncRemote && !syncPromptDismissed && syncCfg());
+    const p = document.getElementById('sync-prompt');
+    if (p) p.classList.toggle('show', show);
+    if (document.body) document.body.classList.toggle('sync-prompting', show);
+}
+
+async function syncPush(opts) {
+    opts = opts || {};
+    const cfg = syncCfg();
+    if (!cfg) return;
+    if (syncBusy) { syncAgain = true; return; }
+    clearTimeout(syncTimer); syncTimer = null;
+    syncBusy = true; syncUI();
+    try {
+        for (let attempt = 0; attempt < 4; attempt++) {
+            const local = bkSnapshot(), m = syncMeta();
+            /* With newer progress held, what goes up is this device's work
+               combined with it - never this device's older copy over it. */
+            const state = syncRemote ? syncNext(local, syncRemote.state) : local;
+            const canon = bkCanon(state);
+            if (syncRemote ? canon === bkCanon(syncRemote.state) : bkHash(canon) === m.hash) break;
+            const body = JSON.stringify({ id: cfg.id, quiz: BK_QUIZ,
+                                          baseRev: syncRemote ? syncRemote.rev : (m.rev || 0), state: state });
+            const r = await fetch(syncApi(), {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: body,
+                keepalive: !!opts.leaving && body.length < 60000 });
+            const data = await r.json().catch(() => ({}));
+            if (r.status === 409) {
+                /* Saved elsewhere first: hold theirs and go again, combined.
+                   On the way out there is no time - the next visit sorts it. */
+                if (opts.leaving) break;
+                syncNotice(data);
+                continue;
+            }
+            if (!r.ok) throw new Error(data.error || ('server said ' + r.status));
+            if (syncRemote) syncRemote = { rev: data.rev, state: state };
+            else syncSetMeta({ rev: data.rev, hash: bkHash(canon) });
+            syncSetMeta({ lastOk: Date.now(), err: null });
+            break;
+        }
+    } catch (e) {
+        syncSetMeta({ err: syncWhy(e) });
+    } finally {
+        syncBusy = false;
+    }
+    syncUI();
+    if (syncAgain) { syncAgain = false; syncLater(); }
+}
+
+async function syncPull(atLoad) {
+    const cfg = syncCfg();
+    if (!cfg || syncBusy) return;
+    syncBusy = true; syncPulledAt = Date.now(); syncUI();
+    let held = false;
+    try {
+        const data = await syncGet(cfg.id);
+        const known = syncRemote ? syncRemote.rev : (syncMeta().rev || 0);
+        if ((data.rev || 0) !== known) held = syncNotice(data);
+        syncSetMeta({ lastOk: Date.now(), err: null });
+    } catch (e) {
+        syncSetMeta({ err: syncWhy(e) });
+    } finally {
+        syncBusy = false;
+    }
+    /* Just opened, nothing on screen is under way yet: simply show it. */
+    if (held && atLoad) { syncApply(); return; }
+    await syncPush();                    // anything of this device's not up there yet
+    syncUI();
+}
+
+/* ------------------------------------------------ sync: the controls */
+function syncFresh(id) {
+    localStorage.setItem(SYNCK.cfg, JSON.stringify({ id: id }));
+    localStorage.setItem(SYNCK.meta, '{}');
+}
+async function syncCreate() {
+    syncFresh(syncNewCode());
+    syncSetMeta({ rev: 0, hash: '' });
+    syncUI(); syncMsg('Turning on…');
+    await syncPush();
+    const m = syncMeta();
+    syncMsg(m.err ? "Couldn't reach the sync server. Your code is saved, and it will keep trying."
+                  : 'Sync is on. Save this code somewhere safe.', m.err ? 'warn' : 'ok');
+    syncUI();
+}
+async function syncLink() {
+    const id = syncParse(document.getElementById('sync-code-in').value);
+    if (!id) { syncMsg("That code isn't right. Check it against your other device.", 'bad'); return; }
+    syncMsg('Linking…');
+    let data;
+    try { data = await syncGet(id); }
+    catch (e) { syncMsg("Couldn't reach the sync server. Nothing was changed.", 'bad'); return; }
+    syncFresh(id);
+    const local = bkSnapshot(), mine = bkCount(local) > 0;
+    if (!data.state) {
+        /* Nothing saved under this code for this quiz yet: this device's
+           progress becomes the synced copy. */
+        syncSetMeta({ rev: 0, hash: '' });
+        await syncPush();
+        syncMsg(syncMeta().err ? "Linked, but couldn't save yet. It will keep trying."
+                               : 'Linked. This device\u2019s progress is now the synced copy.',
+                syncMeta().err ? 'warn' : 'ok');
+        syncUI();
+        return;
+    }
+    /* Anything answered here is combined in, never dropped; otherwise the
+       synced progress is simply taken. */
+    syncSetMeta({ rev: 0, hash: mine ? '' : bkHash(bkCanon(local)) });
+    if (syncTake(data, true)) {
+        bkAfterReload(mine ? 'Linked · progress from both devices combined.' : 'Linked · picked up your synced progress.');
+        location.reload();
+        return;
+    }
+    await syncPush();
+    syncMsg('Linked. Already up to date.', 'ok');
+    syncUI();
+}
+async function syncCopy() {
+    const c = syncCfg();
+    if (!c) return;
+    try { await navigator.clipboard.writeText(syncShow(c.id)); syncMsg('Code copied.', 'ok'); }
+    catch (e) {
+        const el = document.getElementById('sync-code-out');
+        el.focus(); el.select();
+        syncMsg('Copy it from the box above.', 'warn');
+    }
+}
+async function syncNow() {
+    syncMsg('Syncing…');
+    await syncSettle();
+    await syncPull();
+    if (syncRemote) { syncApply(); return; }      // asked for it: show it now
+    const m = syncMeta();
+    syncMsg(m.err ? "Couldn't reach the sync server (" + m.err + ')' : 'Up to date.', m.err ? 'bad' : 'ok');
+    syncUI();
+}
+async function syncOff(btn) {
+    if (!btn.classList.contains('armed')) {
+        btn.classList.add('armed'); btn.textContent = 'Click again to turn off';
+        clearTimeout(syncOff.t);
+        syncOff.t = setTimeout(() => { btn.classList.remove('armed'); btn.textContent = 'Turn off on this device'; }, 4000);
+        return;
+    }
+    clearTimeout(syncOff.t);
+    btn.classList.remove('armed'); btn.textContent = 'Turn off on this device';
+    await syncSettle();
+    if (syncTimer || syncDirty()) await syncPush();           // send what is waiting first
+    localStorage.removeItem(SYNCK.cfg);
+    localStorage.removeItem(SYNCK.meta);
+    syncRemote = null;
+    clearTimeout(syncTimer); syncTimer = null;
+    syncMsg('Sync is off on this device. Your progress stays here.', 'ok');
+    syncUI();
+}
+
+/* ------------------------------------------------------------ showing */
+function syncUI() {
+    const c = syncCfg(), m = syncMeta();
+    let cls = '', text;
+    if (!c) text = 'Auto-sync is off';
+    else if (syncBusy) { text = 'Saving…'; cls = 'on'; }
+    else if (syncRemote) { text = 'Newer progress · refresh to see it'; cls = 'on'; }
+    else if (m.err) { text = m.err === 'offline' ? 'Offline · will sync when back' : 'Sync problem · will retry'; cls = 'err'; }
+    else if (m.lastOk) { text = 'Synced · ' + bkWhen(m.lastOk); cls = 'on'; }
+    else { text = 'Sync is on'; cls = 'on'; }
+    const line = document.getElementById('bk-sync-line');
+    if (line) {
+        line.className = 'bk-sync-line' + (cls ? ' ' + cls : '');
+        line.querySelector('.bk-sync-text').textContent = text;
+    }
+    const off = document.getElementById('sync-off'), on = document.getElementById('sync-on');
+    if (off) off.hidden = !!c;
+    if (on) on.hidden = !c;
+    if (c) {
+        const out = document.getElementById('sync-code-out');
+        if (out && out.value !== syncShow(c.id)) out.value = syncShow(c.id);
+        const st = document.getElementById('sync-status');
+        if (st) st.textContent = m.err ? (m.err === 'offline'
+                    ? "Can't reach the sync server right now. Your progress is safe here and will sync when it can."
+                    : 'The last sync failed (' + m.err + '). It will try again.')
+                : text + '.';
+    }
+    const last = document.getElementById('bk-last');
+    if (last) {
+        const at = bkObj(localStorage.getItem(SYNCK.backup))[BK_QUIZ];
+        last.textContent = at ? 'Last backup from this device: ' + bkWhen(at) + '.' : '';
+    }
+    syncPromptUI();
+}
+
+function bkOpen(where) {
+    bkCancel(); bkMsg(''); syncMsg('');
+    document.getElementById('bk-overlay').classList.add('open');
+    syncUI();
+    if (where === 'sync') {
+        const s = document.getElementById('bk-sync');
+        if (s && s.scrollIntoView) s.scrollIntoView({ block: 'nearest' });
+        if (!syncCfg()) { const b = document.getElementById('sync-create'); if (b) b.focus(); }
+    }
+    if (syncCfg() && Date.now() - syncPulledAt > 5000) syncPull();
+}
+function bkClose() { bkCancel(); document.getElementById('bk-overlay').classList.remove('open'); }
+
+/* While the panel is open, keys belong to it and not to the quiz behind. */
+window.addEventListener('keydown', e => {
+    const o = document.getElementById('bk-overlay');
+    if (!o || !o.classList.contains('open')) return;
+    if (e.key === 'Escape') { bkClose(); e.preventDefault(); }
+    else if (e.key === 'Enter' && e.target && e.target.id === 'sync-code-in') { syncLink(); e.preventDefault(); }
+    e.stopImmediatePropagation();
+}, true);
+
+/* ------------------------------------------------------------ when */
+document.addEventListener('visibilitychange', () => {
+    if (!syncCfg()) return;
+    if (document.visibilityState === 'hidden') { if (syncTimer || syncDirty()) syncPush({ leaving: true }); }
+    else syncMaybePull();
+});
+window.addEventListener('pagehide', () => {
+    if (syncCfg() && (syncTimer || syncDirty())) syncPush({ leaving: true });
+});
+window.addEventListener('online', () => { if (syncCfg()) syncPull(); });
+/* Coming back: to the window, or to the page after a couple of minutes away. */
+function syncMaybePull() { if (syncCfg() && Date.now() - syncPulledAt > 15000) syncPull(); }
+window.addEventListener('focus', syncMaybePull);
+['pointerdown', 'keydown', 'touchstart'].forEach(t => window.addEventListener(t, () => {
+    const away = Date.now() - syncActiveAt;
+    syncActiveAt = Date.now();
+    if (away > 120000) syncMaybePull();
+}, { capture: true, passive: true }));
+(function () {
+    let note = null;
+    try { note = sessionStorage.getItem('bk_note'); sessionStorage.removeItem('bk_note'); } catch (e) {}
+    const go = () => { syncUI(); if (note) bkToast(note); if (syncCfg()) syncPull(true); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go, { once: true });
+    else go();
+})();
 </script>
 </body>
 </html>
