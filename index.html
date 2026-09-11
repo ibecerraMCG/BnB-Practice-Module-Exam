@@ -1383,6 +1383,9 @@ body.pad-live:not(.pad-noring) .question-card.pad-focus {
     color: color-mix(in srgb, var(--live-dot, #34d399) 90%, #000); }
 .bk-main .bk-title { font-size: .92rem; font-weight: 700; }
 .bk-note b { color: var(--text-main); }
+/* the note at the top of the panel: set off by the same line, with the same
+   spacing either side of it, as the line between the two sections */
+#bk-overlay .bk-note.bk-intro { margin: 0 0 1.1rem; padding-bottom: 1.15rem; border-bottom: 1px solid var(--border-color); }
 .bk-sync-line { display: flex; align-items: center; gap: 7px; margin: .6rem .15rem 0; padding: 0;
     background: none; border: 0; font: inherit; font-size: .74rem; color: var(--text-muted);
     cursor: pointer; text-align: left; }
@@ -5988,6 +5991,7 @@ padSyncSettings();
             <button class="pad-close" onclick="bkClose()" aria-label="Close">&#10005;</button>
         </div>
         <div class="pad-body">
+            <p class="bk-note bk-intro" id="bk-intro">Since this is a pretty big question bank, I added these options to prevent accidental loss of progress and so you can continue on another device if you want. I hope it helps &mdash; good luck studying for our last ever module exam!</p>
             <div class="bk-sec" id="bk-sync">
                 <div class="bk-h">Auto-sync</div>
                 <p class="bk-note" id="sync-about" style="margin-top:0">Turn this on to auto-save as you work. Copy the code to another device to link it and continue your progression.</p>
@@ -6032,7 +6036,7 @@ padSyncSettings();
                     </div>
                 </div>
                 <p class="bk-msg" id="bk-msg" role="status"></p>
-                <p class="bk-note" id="bk-about">Manually save a small backup file to prevent quiz data from being lost. Unnecessary if you turn on sync and save the code.</p>
+                <p class="bk-note" id="bk-about">Manually saves a small backup file to prevent quiz data from being lost. Unlike the above sync, this doesn't auto-update, so back up regularly if you use this!</p>
             </div>
         </div>
     </div>
