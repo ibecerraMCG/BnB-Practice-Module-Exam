@@ -1375,7 +1375,7 @@ body.pad-live:not(.pad-noring) .question-card.pad-focus {
 /* The same card as the Live score toggle, outlined in a quiet green: the
    theme's own green taken darker, so it sits with the page's muted colours on
    dark themes and stays readable on light ones. */
-.bk-main { display: flex; align-items: center; justify-content: center; width: 100%; padding: .8rem .95rem;
+.bk-main { display: flex; align-items: center; justify-content: center; width: 100%; padding: .6rem .95rem;
     border-radius: 12px; cursor: pointer; font: inherit; text-align: center; background: var(--bg-card);
     border: 1.5px solid #20835f; color: #279e73;
     border-color: color-mix(in srgb, var(--live-dot, #34d399) 62%, #000);
@@ -1384,7 +1384,7 @@ body.pad-live:not(.pad-noring) .question-card.pad-focus {
 .bk-main:hover { background: var(--bg-card-hover);
     border-color: color-mix(in srgb, var(--live-dot, #34d399) 80%, #000);
     color: color-mix(in srgb, var(--live-dot, #34d399) 90%, #000); }
-.bk-main .bk-title { font-size: .92rem; font-weight: 700; }
+.bk-main .bk-title { font-size: .84rem; font-weight: 700; }
 .bk-note b { color: var(--text-main); }
 /* the note at the top of the panel: set off by the same line, with the same
    spacing either side of it, as the line between the two sections */
@@ -1393,9 +1393,6 @@ body.pad-live:not(.pad-noring) .question-card.pad-focus {
     background: none; border: 0; font: inherit; font-size: .74rem; color: var(--text-muted);
     cursor: pointer; text-align: left; }
 .bk-sync-line:hover .bk-sync-text { color: var(--text-accent); text-decoration: underline; }
-.bk-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-color); flex: none; }
-.bk-sync-line.on .bk-dot { background: #4ade80; box-shadow: 0 0 0 3px rgba(74,222,128,.18); }
-.bk-sync-line.err .bk-dot { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.18); }
 
 #bk-overlay { display: none; position: fixed; inset: 0; z-index: 520;
     background: rgba(0,0,0,.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
@@ -1781,9 +1778,9 @@ body.sync-prompting #pad-toast, body.sync-prompting #bk-toast { bottom: 84px; }
                     <div class="bk-block" id="bk-block">
                         <div class="setup-label">Your progress</div>
                         <button class="bk-main" id="bk-open" onclick="bkOpen()" title="Save a backup file, restore one, or sync your progress across devices">
-                            <span class="bk-title">Auto-Sync Progress / Backup &amp; Restore</span>
+                            <span class="bk-title">Auto-Sync / Backup</span>
                         </button>
-                        <button class="bk-sync-line" id="bk-sync-line" onclick="bkOpen('sync')" title="Sync your progress across devices automatically"><span class="bk-dot" aria-hidden="true"></span><span class="bk-sync-text">Auto-sync is off</span></button>
+                        <button class="bk-sync-line" id="bk-sync-line" onclick="bkOpen('sync')" title="Sync your progress across devices automatically"><span class="bk-sync-text">Auto-sync is off</span></button>
                     </div>
                 </div>
                 </div>
@@ -5994,7 +5991,7 @@ padSyncSettings();
             <button class="pad-close" onclick="bkClose()" aria-label="Close">&#10005;</button>
         </div>
         <div class="pad-body">
-            <p class="bk-note bk-intro" id="bk-intro">Since this is a pretty big question bank, I added these options to prevent accidental loss of progress and so you can continue on another device if you want. I hope it helps &mdash; good luck studying for our last ever module exam!</p>
+            <p class="bk-note bk-intro" id="bk-intro">Since this is a pretty big question bank, I added these options to prevent accidental loss of progress and so you can continue on another device if you want. I hope it helps, and good luck!</p>
             <div class="bk-sec" id="bk-sync">
                 <div class="bk-h">Auto-sync</div>
                 <p class="bk-note" id="sync-about" style="margin-top:0">Turn this on to auto-save as you work. Copy the code to another device to link it and continue your progression. Save this somewhere safe in case you need it for restoring your progress later.</p>
